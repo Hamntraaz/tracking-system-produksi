@@ -1,13 +1,12 @@
 # Rafiza Operational Partner System
 
-Frontend dummy untuk presentasi sistem operasional Rafiza Fried Chicken.
+Frontend sistem operasional Rafiza Fried Chicken. Data dashboard diambil dari backend API melalui `VITE_API_BASE_URL`.
 
-## Akun Dummy
+## Akun Awal
 
-- Admin Gudang: admin@gmail.com / 12345678
-- Supplier: supplier@gmail.com / 12345678
-- Kurir: kurir@gmail.com / 12345678
 - Manajemen: manager@gmail.com / 12345678
+
+Akun admin gudang, supplier, dan kurir dibuat dari menu manajemen setelah backend tersambung.
 
 ## Jalankan
 
@@ -16,6 +15,18 @@ npm install
 npm run dev
 ```
 
-## Catatan
+## Deploy Vercel
 
-Versi ini fokus pada FE dummy/prototype. Data masih static di `src/data/dummyData.js` dan siap diganti ke API backend Laravel.
+Set environment variable di Vercel:
+
+```env
+VITE_API_BASE_URL=https://DOMAIN-BACKEND.up.railway.app/api
+VITE_CLOUDINARY_CLOUD_NAME=dubjinrem
+VITE_CLOUDINARY_UPLOAD_PRESET=buktiAntar
+```
+
+Build command: `npm run build`
+
+Output directory: `dist`
+
+File `vercel.json` sudah disiapkan untuk build Vite dan rewrite SPA.
