@@ -1,0 +1,23 @@
+{
+  "name": "rafiza-operasional-v14-logo-login-fix",
+  "private": true,
+  "version": "0.14.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:local": "vite"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "leaflet": "latest",
+    "react-leaflet": "latest",
+    "jspdf": "latest",
+    "jspdf-autotable": "latest"
+  },
+  "devDependencies": {}
+}
