@@ -1,5 +1,6 @@
 export const roleOptions = [
-  { email: 'gudang@gmail.com', label: 'Gudang/Cabang', role: 'warehouse', helper: 'Mengelola stok, membuat pesanan bahan baku, dan mengonfirmasi penerimaan barang.' },
+  { email: 'gudang@gmail.com', label: 'Gudang', role: 'warehouse', helper: 'Mengelola stok, membuat pesanan bahan baku, dan mengonfirmasi penerimaan barang.' },
+  { email: 'cabang@gmail.com', label: 'Cabang', role: 'branch', helper: 'Meminta barang ke gudang, memantau maps, mengelola stok cabang, dan mencatat penjualan.' },
   { email: 'supplier@gmail.com', label: 'Supplier', role: 'supplier', helper: 'Menerima pesanan, memproses bahan baku, dan menugaskan kurir supplier.' },
   { email: 'kurir@gmail.com', label: 'Kurir', role: 'courier', helper: 'Melihat tugas pengiriman dan memperbarui status perjalanan.' },
   { email: 'manager@gmail.com', label: 'Manajemen', role: 'manager', helper: 'Memantau dashboard, laporan, dan risiko stok operasional.' },

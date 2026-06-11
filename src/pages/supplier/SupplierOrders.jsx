@@ -58,7 +58,7 @@ export default function SupplierOrders({ data = {}, deviceLocation, requestLocat
   const columns = [
     { key: 'code', label: 'Kode' },
     { key: 'items_text', label: 'Item' },
-    { key: 'warehouse_name', label: 'Dari Gudang', render: (row) => row.warehouse_name || 'Gudang/Cabang Rafiza' },
+    { key: 'warehouse_name', label: 'Dari Gudang', render: (row) => row.warehouse_name || 'Gudang Rafiza' },
     { key: 'supplier_name', label: 'Supplier' },
     { key: 'courier_name', label: 'Kurir' },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status || '-'}</StatusBadge> },

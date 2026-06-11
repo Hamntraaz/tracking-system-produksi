@@ -42,7 +42,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
         warehouse_id: user?.warehouse_id || null,
         destination_lat: coords?.latitude,
         destination_lng: coords?.longitude,
-        destination_address: user?.branch || user?.name || 'Gudang/Cabang Rafiza',
+        destination_address: user?.branch || user?.name || 'Gudang Rafiza',
       })
       setMessage('Permintaan barang terkirim ke supplier yang dipilih. Supplier akan mendapat notifikasi beep saat dashboardnya aktif.')
       setForm({ supplier_id: suppliers[0]?.id || '', quantity: '', notes: '' })
@@ -58,7 +58,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
     setSaving(true)
     setMessage('')
     try {
-      await receiveOrder({ order_id: order.id, created_by: user?.name || 'Gudang/Cabang', warehouse_id: user?.warehouse_id || null })
+      await receiveOrder({ order_id: order.id, created_by: user?.name || 'Gudang', warehouse_id: user?.warehouse_id || null })
       setMessage(`${order.code} berhasil diterima gudang. Stok bertambah dan masuk laporan barang masuk.`)
       await refreshData?.()
     } catch (error) {
@@ -72,7 +72,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
     { key: 'code', label: 'Kode PO' },
     { key: 'items_text', label: 'Item' },
     { key: 'supplier_name', label: 'Supplier' },
-    { key: 'warehouse_name', label: 'Gudang/Cabang' },
+    { key: 'warehouse_name', label: 'Gudang' },
     { key: 'courier_name', label: 'Kurir' },
     { key: 'ordered_at', label: 'Tanggal' },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status}</StatusBadge> },
@@ -87,7 +87,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
 
   return (
     <>
-      <section className="page-head-card"><div><span>Gudang/Cabang</span><h2>Permintaan Barang ke Supplier</h2><p>Gudang memilih supplier. Bahan baku dan satuan otomatis mengikuti data supplier yang didaftarkan manajer.</p></div></section>
+      <section className="page-head-card"><div><span>Gudang</span><h2>Permintaan Barang ke Supplier</h2><p>Gudang memilih supplier. Bahan baku dan satuan otomatis mengikuti data supplier yang didaftarkan manajer.</p></div></section>
       {message && <div className="api-alert">{message}</div>}
       <section className="content-grid two-one">
         <article className="panel-card wide">
@@ -111,7 +111,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
             {!selectedMaterial && selectedSupplier && <p className="warning-box">Bahan supplier belum ada di master bahan. Sistem biasanya membuat master bahan otomatis saat manajer menambahkan supplier.</p>}
             <label>Catatan</label>
             <textarea value={form.notes} onChange={(e) => updateField('notes', e.target.value)} placeholder="Contoh: Stok ayam untuk cabang A menipis" />
-            <p className="helper-box">Koordinat tujuan akan diambil dari izin lokasi browser gudang/cabang, bukan titik toko statis.</p>
+            <p className="helper-box">Koordinat tujuan akan diambil dari izin lokasi browser gudang, bukan titik toko statis.</p>
             <button className="login-button" type="submit" disabled={saving || !selectedSupplier || !selectedMaterial}>{saving ? 'Mengirim...' : 'Kirim Permintaan ke Supplier'}</button>
           </form>
         </article>

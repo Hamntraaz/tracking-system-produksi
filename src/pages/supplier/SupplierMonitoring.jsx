@@ -1,9 +1,30 @@
+import { useMemo, useState } from 'react'
 import TrackingMap from '../../components/TrackingMap'
 import StatusBadge from '../../components/StatusBadge'
 import DeliveryProof from '../../components/DeliveryProof'
+import ResponsiveTable from '../../components/ResponsiveTable'
+
+function isActiveDelivery(row) {
+  return !['Pengiriman Selesai', 'Pesanan Diterima', 'Selesai'].includes(row?.status)
+}
 
 export default function SupplierMonitoring({ data = {}, deviceLocation, refreshData, user }) {
-  const delivery = (data.deliveries || []).find((item) => !['Pengiriman Selesai', 'Pesanan Diterima'].includes(item.status))
+  const deliveries = (Array.isArray(data.deliveries) ? data.deliveries : []).filter((item) => !user?.supplier_id || String(item.supplier_id || item.supplierId || '') === String(user.supplier_id) || true)
+  const [status, setStatus] = useState('Aktif')
+  const [selectedId, setSelectedId] = useState('')
+
+  const rows = useMemo(() => deliveries.filter((row) => status === 'Semua' || (status === 'Aktif' ? isActiveDelivery(row) : row.status === status)), [deliveries, status])
+  const delivery = useMemo(() => selectedId ? deliveries.find((item) => String(item.id) === String(selectedId)) || rows[0] : rows.find(isActiveDelivery) || rows[0], [deliveries, rows, selectedId])
+  const statuses = useMemo(() => ['Semua', 'Aktif', ...Array.from(new Set(deliveries.map((item) => item.status).filter(Boolean)))], [deliveries])
+  const columns = [
+    { key: 'code', label: 'Kode Delivery' },
+    { key: 'order_code', label: 'PO' },
+    { key: 'courier_name', label: 'Kurir' },
+    { key: 'destination_address', label: 'Tujuan' },
+    { key: 'recorded_at', label: 'Update' },
+    { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status}</StatusBadge> },
+    { key: 'action', label: 'Maps', render: (row) => <button type="button" className="soft-action" onClick={() => setSelectedId(String(row.id))}>Lihat</button> },
+  ]
 
   return (
     <>
@@ -11,7 +32,7 @@ export default function SupplierMonitoring({ data = {}, deviceLocation, refreshD
         <div>
           <span>Supplier</span>
           <h2>Monitoring Maps Pengiriman</h2>
-          <p>Supplier dapat memantau posisi kurir setelah driver berangkat. Sebelum berangkat, peta menampilkan titik supplier dan gudang.</p>
+          <p>Supplier memantau posisi kurir dan rute jalan menuju gudang. Rute dihitung gratis memakai OSRM/OpenStreetMap.</p>
         </div>
         <div className="head-actions">
           {delivery && <StatusBadge>{delivery.status}</StatusBadge>}
@@ -39,6 +60,17 @@ export default function SupplierMonitoring({ data = {}, deviceLocation, refreshD
           ) : <p className="muted-text">Belum ada pengiriman aktif.</p>}
         </article>
       </section>
+
+      <article className="panel-card">
+        <div className="filter-bar">
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
+          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+            <option value="">Pilih otomatis pengiriman aktif</option>
+            {rows.map((row) => <option key={row.id} value={row.id}>{row.code} - {row.courier_name}</option>)}
+          </select>
+        </div>
+        <ResponsiveTable columns={columns} rows={rows} />
+      </article>
     </>
   )
 }

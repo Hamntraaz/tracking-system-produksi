@@ -7,7 +7,7 @@ export default function Layout({ user = {}, activePage, setActivePage, onLogout,
     name: user.name || 'User Rafiza',
     avatar: user.avatar || 'RF',
     role: normalizeRole(user.role || 'warehouse'),
-    roleName: user.roleName || user.role_name || (normalizeRole(user.role) === 'warehouse' ? 'Gudang/Cabang' : 'Dashboard'),
+    roleName: user.roleName || user.role_name || (normalizeRole(user.role) === 'warehouse' ? 'Gudang' : normalizeRole(user.role) === 'branch' ? 'Cabang' : 'Dashboard'),
   }
   const navigation = getRoutesForRole(safeUser.role)
   const currentRoute = getRouteForRolePage(safeUser.role, activePage)

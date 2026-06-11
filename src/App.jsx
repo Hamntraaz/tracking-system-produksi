@@ -4,7 +4,7 @@ import LandingPage from './pages/public/LandingPage'
 import WarehouseDashboard from './pages/warehouse/WarehouseDashboard'
 import WarehouseStocks from './pages/warehouse/WarehouseStocks'
 import WarehouseOrders from './pages/warehouse/WarehouseOrders'
-import WarehouseProductionUsage from './pages/warehouse/WarehouseProductionUsage'
+import WarehouseBranchRequests from './pages/warehouse/WarehouseBranchRequests'
 import WarehouseTracking from './pages/warehouse/WarehouseTracking'
 import SupplierDashboard from './pages/supplier/SupplierDashboard'
 import SupplierOrders from './pages/supplier/SupplierOrders'
@@ -17,6 +17,11 @@ import ManagerDashboard from './pages/manager/ManagerDashboard'
 import ManagerMonitoring from './pages/manager/ManagerMonitoring'
 import ManagerReports from './pages/manager/ManagerReports'
 import ManagerAccounts from './pages/manager/ManagerAccounts'
+import BranchDashboard from './pages/branch/BranchDashboard'
+import BranchStock from './pages/branch/BranchStock'
+import BranchRequests from './pages/branch/BranchRequests'
+import BranchSales from './pages/branch/BranchSales'
+import BranchTracking from './pages/branch/BranchTracking'
 import { getOverview, saveActorLocation } from './services/api'
 import useBrowserLocation from './hooks/useBrowserLocation'
 import {
@@ -39,6 +44,10 @@ const emptyData = {
   deliveries: [],
   movements: [],
   warehouses: [],
+  branches: [],
+  branch_stocks: [],
+  branch_requests: [],
+  branch_sales: [],
   timeline: [],
   actor_locations: {},
   notifications: [],
@@ -59,6 +68,10 @@ function normalizeData(payload) {
     deliveries: normalizeArray(raw.deliveries),
     movements: normalizeArray(raw.movements),
     warehouses: normalizeArray(raw.warehouses),
+    branches: normalizeArray(raw.branches),
+    branch_stocks: normalizeArray(raw.branch_stocks),
+    branch_requests: normalizeArray(raw.branch_requests),
+    branch_sales: normalizeArray(raw.branch_sales),
     timeline: normalizeArray(raw.timeline),
     actor_locations: raw.actor_locations && typeof raw.actor_locations === 'object' ? raw.actor_locations : {},
     notifications: normalizeArray(raw.notifications),
@@ -217,12 +230,13 @@ export default function App() {
       name: safeUser.name || 'User Rafiza',
       email: safeUser.email || '-',
       role: normalizeRole(safeUser.role || 'warehouse'),
-      roleName: safeUser.roleName || safeUser.role_name || (normalizeRole(safeUser.role) === 'warehouse' ? 'Gudang/Cabang' : 'Dashboard'),
+      roleName: safeUser.roleName || safeUser.role_name || (normalizeRole(safeUser.role) === 'warehouse' ? 'Gudang' : normalizeRole(safeUser.role) === 'branch' ? 'Cabang' : 'Dashboard'),
       branch: safeUser.branch || 'Rafiza Fried Chicken',
       avatar: safeUser.avatar || 'RF',
       supplier_id: safeUser.supplier_id || null,
       courier_id: safeUser.courier_id || null,
       warehouse_id: safeUser.warehouse_id || null,
+      branch_id: safeUser.branch_id || null,
     }
 
     const currentRoute = parsePrivatePath(window.location.pathname)
@@ -242,7 +256,7 @@ export default function App() {
     requestLocation?.()
       .then((position) => {
         if (position?.coords) {
-          return saveActorLocation({ userId: nextUser.id, role: nextUser.role, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy })
+          return saveActorLocation({ userId: nextUser.id, role: nextUser.role, supplier_id: nextUser.supplier_id, courier_id: nextUser.courier_id, warehouse_id: nextUser.warehouse_id, branch_id: nextUser.branch_id, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy })
         }
         return null
       })
@@ -330,6 +344,10 @@ export default function App() {
     saveActorLocation({
       userId: user.id,
       role: user.role,
+      supplier_id: user.supplier_id,
+      courier_id: user.courier_id,
+      warehouse_id: user.warehouse_id,
+      branch_id: user.branch_id,
       latitude: deviceLocation.latitude,
       longitude: deviceLocation.longitude,
       accuracy: deviceLocation.accuracy,
@@ -362,9 +380,16 @@ export default function App() {
     warehouse: {
       dashboard: <WarehouseDashboard {...pageProps} />,
       stocks: <WarehouseStocks {...pageProps} />,
-      usage: <WarehouseProductionUsage {...pageProps} />,
       orders: <WarehouseOrders {...pageProps} />,
+      branchRequests: <WarehouseBranchRequests {...pageProps} />,
       tracking: <WarehouseTracking {...pageProps} />,
+    },
+    branch: {
+      dashboard: <BranchDashboard {...pageProps} />,
+      stock: <BranchStock {...pageProps} />,
+      requests: <BranchRequests {...pageProps} />,
+      sales: <BranchSales {...pageProps} />,
+      tracking: <BranchTracking {...pageProps} />,
     },
     supplier: {
       dashboard: <SupplierDashboard {...pageProps} />,

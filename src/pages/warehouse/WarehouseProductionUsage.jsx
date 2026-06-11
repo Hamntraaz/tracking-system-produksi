@@ -25,7 +25,7 @@ export default function WarehouseProductionUsage({ data = {}, user = {}, refresh
         material_id: Number(form.material_id),
         quantity: Number(form.quantity),
         notes: form.notes || 'Pemakaian produksi harian',
-        created_by: user?.name || 'Gudang/Cabang',
+        created_by: user?.name || 'Gudang',
       })
       setMessage('Pemakaian produksi berhasil dicatat. Stok otomatis berkurang dan laporan manajemen diperbarui.')
       setForm({ material_id: materials[0]?.id || '', quantity: '', notes: '' })
@@ -51,7 +51,7 @@ export default function WarehouseProductionUsage({ data = {}, user = {}, refresh
     <>
       <section className="page-head-card">
         <div>
-          <span>Gudang/Cabang</span>
+          <span>Gudang</span>
           <h2>Pemakaian Produksi</h2>
           <p>Catat bahan yang dipakai untuk produksi agar stok berkurang secara resmi, bukan berubah tiba-tiba.</p>
         </div>

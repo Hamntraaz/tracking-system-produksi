@@ -27,10 +27,10 @@ export function login(email, password) {
 
 export function getOverview() { return request('/overview') }
 
-export function saveActorLocation({ userId, role, latitude, longitude, accuracy }) {
+export function saveActorLocation({ userId, role, supplier_id, courier_id, warehouse_id, branch_id, latitude, longitude, accuracy }) {
   return request('/actor-location', {
     method: 'POST',
-    body: JSON.stringify({ user_id: userId, role, latitude, longitude, accuracy }),
+    body: JSON.stringify({ user_id: userId, role, supplier_id, courier_id, warehouse_id, branch_id, latitude, longitude, accuracy }),
   })
 }
 
@@ -138,4 +138,32 @@ export function deleteManagedWarehouse(id) {
 
 export function updateManagedAccountStatus(payload) {
   return request('/manager-accounts-status', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function createManagedBranch(payload) {
+  return request('/manager-branches', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateManagedBranch(payload) {
+  return request('/manager-branches-update', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function deleteManagedBranch(id) {
+  return request('/manager-branches-delete', { method: 'POST', body: JSON.stringify({ id }) })
+}
+
+export function createBranchRequest(payload) {
+  return request('/branch-requests', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateBranchRequest(payload) {
+  return request('/branch-request-status', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function recordBranchSale(payload) {
+  return request('/branch-sales', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function getMapsRoute(waypoints) {
+  return request('/maps-route', { method: 'POST', body: JSON.stringify({ waypoints }) })
 }

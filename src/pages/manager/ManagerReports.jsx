@@ -52,7 +52,7 @@ ${sheetXml('Pemakaian Produksi', [
   { label: 'Tanggal', value: (r) => r.created_at }, { label: 'Bahan', value: (r) => r.material_name }, { label: 'Jumlah', value: (r) => `${r.quantity} ${r.unit}` }, { label: 'Stok Awal', value: (r) => r.stock_before }, { label: 'Stok Akhir', value: (r) => r.stock_after }, { label: 'Catatan', value: (r) => r.notes }, { label: 'Dicatat Oleh', value: (r) => r.created_by },
 ], stockOut)}
 ${sheetXml('Pembelian Gudang', [
-  { label: 'Kode PO', value: (r) => r.code }, { label: 'Gudang/Cabang', value: (r) => r.warehouse_name }, { label: 'Supplier', value: (r) => r.supplier_name }, { label: 'Item', value: (r) => r.items_text }, { label: 'Kurir', value: (r) => r.courier_name }, { label: 'Status', value: (r) => r.status }, { label: 'Tanggal', value: (r) => r.ordered_at },
+  { label: 'Kode PO', value: (r) => r.code }, { label: 'Gudang', value: (r) => r.warehouse_name }, { label: 'Supplier', value: (r) => r.supplier_name }, { label: 'Item', value: (r) => r.items_text }, { label: 'Kurir', value: (r) => r.courier_name }, { label: 'Status', value: (r) => r.status }, { label: 'Tanggal', value: (r) => r.ordered_at },
 ], orders)}
 ${sheetXml('Supplier', [
   { label: 'Nama PT/CV', value: (r) => r.name }, { label: 'Bahan Baku', value: (r) => r.material_type }, { label: 'Satuan', value: (r) => r.material_unit }, { label: 'Kontak', value: (r) => r.phone }, { label: 'Status', value: (r) => r.status },
