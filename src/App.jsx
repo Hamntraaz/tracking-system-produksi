@@ -19,6 +19,15 @@ import ManagerReports from './pages/manager/ManagerReports'
 import ManagerAccounts from './pages/manager/ManagerAccounts'
 import { getOverview, saveActorLocation } from './services/api'
 import useBrowserLocation from './hooks/useBrowserLocation'
+import {
+  buildPrivatePath,
+  getPublicRouteByKey,
+  getPublicRouteByPath,
+  getRouteForRolePage,
+  isValidPageForRole,
+  normalizePathname,
+  parsePrivatePath,
+} from './routes'
 
 const emptyData = {
   summary: {},
@@ -34,6 +43,8 @@ const emptyData = {
   notifications: [],
   users: [],
 }
+
+const STORAGE_KEY = 'rafiza_user'
 
 function normalizeArray(value) { return Array.isArray(value) ? value : [] }
 function normalizeData(payload) {
@@ -52,6 +63,50 @@ function normalizeData(payload) {
     notifications: normalizeArray(raw.notifications),
     users: normalizeArray(raw.users),
   }
+}
+
+function getStoredUser() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveStoredUser(user) {
+  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user)) } catch {}
+}
+
+function clearStoredUser() {
+  try { window.localStorage.removeItem(STORAGE_KEY) } catch {}
+}
+
+function setBrowserPath(path, replace = false) {
+  if (!path) return
+  const current = normalizePathname(window.location.pathname)
+  const next = normalizePathname(path)
+  if (current === next) return
+  const action = replace ? 'replaceState' : 'pushState'
+  window.history[action]({}, '', next)
+}
+
+function getInitialPublicPage() {
+  const pathname = normalizePathname(window.location.pathname)
+  if (pathname === '/login') return 'home'
+  return getPublicRouteByPath(pathname)?.key || 'home'
+}
+
+function getInitialLoginOpen(storedUser) {
+  const pathname = normalizePathname(window.location.pathname)
+  if (storedUser) return false
+  return pathname === '/login' || Boolean(parsePrivatePath(pathname))
+}
+
+function getInitialActivePage(storedUser) {
+  const privateRoute = parsePrivatePath(window.location.pathname)
+  if (storedUser && privateRoute?.role === storedUser.role) return privateRoute.page
+  return 'dashboard'
 }
 
 function beep() {
@@ -78,8 +133,11 @@ function roleRelevantNotifications(data, role) {
 }
 
 export default function App() {
-  const [user, setUser] = useState(null)
-  const [activePage, setActivePage] = useState('dashboard')
+  const initialUser = useMemo(() => getStoredUser(), [])
+  const [user, setUser] = useState(initialUser)
+  const [activePage, setActivePageState] = useState(() => getInitialActivePage(initialUser))
+  const [publicPage, setPublicPage] = useState(() => getInitialPublicPage())
+  const [loginOpen, setLoginOpen] = useState(() => getInitialLoginOpen(initialUser))
   const [data, setData] = useState(emptyData)
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState('')
@@ -87,6 +145,7 @@ export default function App() {
   const snapshotRef = useRef('')
   const firstLoadRef = useRef(true)
   const lastLocationSendRef = useRef(0)
+  const intendedRouteRef = useRef(parsePrivatePath(window.location.pathname))
   const { deviceLocation, locationStatus, locationError, requestLocation, startWatching, stopWatching } = useBrowserLocation()
 
   function buildSnapshot(nextData, role) {
@@ -122,6 +181,32 @@ export default function App() {
     }
   }
 
+  function navigatePrivate(page, { replace = false } = {}) {
+    if (!user) return
+    const safePage = isValidPageForRole(user.role, page) ? page : 'dashboard'
+    setActivePageState(safePage)
+    setBrowserPath(buildPrivatePath(user.role, safePage), replace)
+  }
+
+  function navigatePublic(page, { replace = false } = {}) {
+    const route = getPublicRouteByKey(page)
+    setPublicPage(route.key)
+    setLoginOpen(false)
+    setBrowserPath(route.path, replace)
+  }
+
+  function openLogin() {
+    intendedRouteRef.current = parsePrivatePath(window.location.pathname)
+    setLoginOpen(true)
+    setBrowserPath('/login')
+  }
+
+  function closeLogin() {
+    setLoginOpen(false)
+    intendedRouteRef.current = null
+    setBrowserPath(getPublicRouteByKey(publicPage).path)
+  }
+
   async function handleLogin(userData) {
     const safeUser = userData || {}
     const nextUser = {
@@ -129,15 +214,26 @@ export default function App() {
       name: safeUser.name || 'User Rafiza',
       email: safeUser.email || '-',
       role: safeUser.role || 'admin',
-      roleName: safeUser.roleName || 'Dashboard',
+      roleName: safeUser.roleName || safeUser.role_name || 'Dashboard',
       branch: safeUser.branch || 'Rafiza Fried Chicken',
       avatar: safeUser.avatar || 'RF',
       supplier_id: safeUser.supplier_id || null,
       courier_id: safeUser.courier_id || null,
       warehouse_id: safeUser.warehouse_id || null,
     }
+
+    const currentRoute = parsePrivatePath(window.location.pathname)
+    const intendedRoute = intendedRouteRef.current || currentRoute
+    const targetPage = intendedRoute?.role === nextUser.role && isValidPageForRole(nextUser.role, intendedRoute.page)
+      ? intendedRoute.page
+      : 'dashboard'
+
     setUser(nextUser)
-    setActivePage('dashboard')
+    saveStoredUser(nextUser)
+    setLoginOpen(false)
+    setActivePageState(targetPage)
+    setBrowserPath(buildPrivatePath(nextUser.role, targetPage), true)
+    intendedRouteRef.current = null
     firstLoadRef.current = true
     snapshotRef.current = ''
     requestLocation?.()
@@ -153,14 +249,75 @@ export default function App() {
 
   function handleLogout() {
     stopWatching?.()
+    clearStoredUser()
     setUser(null)
-    setActivePage('dashboard')
+    setActivePageState('dashboard')
     setData(emptyData)
     setApiError('')
     setToast(null)
     firstLoadRef.current = true
     snapshotRef.current = ''
+    intendedRouteRef.current = null
+    navigatePublic('home', { replace: true })
   }
+
+  useEffect(() => {
+    function handlePopState() {
+      const pathname = normalizePathname(window.location.pathname)
+      const privateRoute = parsePrivatePath(pathname)
+
+      if (privateRoute && user) {
+        if (privateRoute.role === user.role) {
+          setActivePageState(privateRoute.page)
+          const canonicalPath = buildPrivatePath(privateRoute.role, privateRoute.page)
+          if (canonicalPath !== pathname) setBrowserPath(canonicalPath, true)
+        } else {
+          setActivePageState('dashboard')
+          setBrowserPath(buildPrivatePath(user.role, 'dashboard'), true)
+        }
+        setLoginOpen(false)
+        return
+      }
+
+      if (privateRoute && !user) {
+        intendedRouteRef.current = privateRoute
+        setPublicPage('home')
+        setLoginOpen(true)
+        return
+      }
+
+      if (pathname === '/login') {
+        setPublicPage('home')
+        setLoginOpen(true)
+        return
+      }
+
+      const publicRoute = getPublicRouteByPath(pathname)
+      setPublicPage(publicRoute?.key || 'home')
+      setLoginOpen(false)
+    }
+
+    handlePopState()
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    const privateRoute = parsePrivatePath(window.location.pathname)
+    if (!privateRoute || privateRoute.role !== user.role || privateRoute.page !== activePage) {
+      setBrowserPath(buildPrivatePath(user.role, activePage), true)
+    }
+  }, [user, activePage])
+
+  useEffect(() => {
+    if (!user) {
+      document.title = 'Rafiza Fried Chicken | Operational Partner System'
+      return
+    }
+    const route = getRouteForRolePage(user.role, activePage)
+    document.title = `${route.title} | Rafiza Operational System`
+  }, [user, activePage])
 
   useEffect(() => {
     if (!user || !deviceLocation) return
@@ -178,6 +335,7 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return undefined
+    loadData({ silent: true })
     const interval = window.setInterval(() => loadData({ silent: true }), 4000)
     return () => window.clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -198,10 +356,30 @@ export default function App() {
   }
 
   const pageMap = useMemo(() => ({
-    admin: { dashboard: <AdminDashboard {...pageProps} />, stocks: <AdminStocks {...pageProps} />, usage: <AdminProductionUsage {...pageProps} />, orders: <AdminOrders {...pageProps} />, tracking: <AdminTracking {...pageProps} /> },
-    supplier: { dashboard: <SupplierDashboard {...pageProps} />, orders: <SupplierOrders {...pageProps} />, couriers: <SupplierCouriers {...pageProps} />, monitoring: <SupplierMonitoring {...pageProps} /> },
-    courier: { dashboard: <CourierDashboard {...pageProps} />, tasks: <CourierTasks {...pageProps} />, tracking: <CourierTracking {...pageProps} /> },
-    manager: { dashboard: <ManagerDashboard {...pageProps} />, accounts: <ManagerAccounts {...pageProps} />, monitoring: <ManagerMonitoring {...pageProps} />, reports: <ManagerReports {...pageProps} /> },
+    admin: {
+      dashboard: <AdminDashboard {...pageProps} />,
+      stocks: <AdminStocks {...pageProps} />,
+      usage: <AdminProductionUsage {...pageProps} />,
+      orders: <AdminOrders {...pageProps} />,
+      tracking: <AdminTracking {...pageProps} />,
+    },
+    supplier: {
+      dashboard: <SupplierDashboard {...pageProps} />,
+      orders: <SupplierOrders {...pageProps} />,
+      couriers: <SupplierCouriers {...pageProps} />,
+      monitoring: <SupplierMonitoring {...pageProps} />,
+    },
+    courier: {
+      dashboard: <CourierDashboard {...pageProps} />,
+      tasks: <CourierTasks {...pageProps} />,
+      tracking: <CourierTracking {...pageProps} />,
+    },
+    manager: {
+      dashboard: <ManagerDashboard {...pageProps} />,
+      accounts: <ManagerAccounts {...pageProps} />,
+      monitoring: <ManagerMonitoring {...pageProps} />,
+      reports: <ManagerReports {...pageProps} />,
+    },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [data, loading, apiError, user, deviceLocation, locationStatus, locationError])
 
@@ -209,11 +387,23 @@ export default function App() {
   const currentPage = rolePages ? (rolePages[activePage] || rolePages.dashboard) : null
 
   if (!user) {
-    return <LandingPage onLogin={handleLogin} deviceLocation={deviceLocation} locationStatus={locationStatus} locationError={locationError} requestLocation={requestLocation} />
+    return (
+      <LandingPage
+        onLogin={handleLogin}
+        activePage={publicPage}
+        onNavigate={navigatePublic}
+        loginOpen={loginOpen}
+        onLoginOpenChange={(open) => (open ? openLogin() : closeLogin())}
+        deviceLocation={deviceLocation}
+        locationStatus={locationStatus}
+        locationError={locationError}
+        requestLocation={requestLocation}
+      />
+    )
   }
 
   return (
-    <Layout user={user} activePage={activePage} setActivePage={setActivePage} onLogout={handleLogout} onRefresh={() => loadData()} loading={loading}>
+    <Layout user={user} activePage={activePage} setActivePage={navigatePrivate} onLogout={handleLogout} onRefresh={() => loadData()} loading={loading}>
       {toast && <div className="beep-toast"><b>{toast.title}</b><span>{toast.message}</span></div>}
       {apiError && <div className="api-alert"><b>API belum tersambung:</b> {apiError}</div>}
       {locationError && <div className="location-alert"><b>Lokasi belum aktif:</b> {locationError}</div>}

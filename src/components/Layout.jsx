@@ -1,41 +1,16 @@
 import logo from '../assets/rafiza-logo.png'
 import { Icon } from './Icons'
-
-const navByRole = {
-  admin: [
-    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { key: 'stocks', label: 'Stok Bahan', icon: 'stock' },
-    { key: 'usage', label: 'Pemakaian Produksi', icon: 'report' },
-    { key: 'orders', label: 'Pesanan', icon: 'order' },
-    { key: 'tracking', label: 'Tracking', icon: 'map' },
-  ],
-  supplier: [
-    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { key: 'orders', label: 'Pesanan Masuk', icon: 'order' },
-    { key: 'couriers', label: 'Kurir Supplier', icon: 'courier' },
-    { key: 'monitoring', label: 'Monitoring Maps', icon: 'map' },
-  ],
-  courier: [
-    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { key: 'tasks', label: 'Tugas Antar', icon: 'courier' },
-    { key: 'tracking', label: 'Maps', icon: 'map' },
-  ],
-  manager: [
-    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { key: 'accounts', label: 'Akun & Mitra', icon: 'supplier' },
-    { key: 'monitoring', label: 'Monitoring', icon: 'chart' },
-    { key: 'reports', label: 'Laporan', icon: 'report' },
-  ],
-}
+import { getRouteForRolePage, getRoutesForRole } from '../routes'
 
 export default function Layout({ user = {}, activePage, setActivePage, onLogout, onRefresh, loading, children }) {
   const safeUser = {
     name: user.name || 'User Rafiza',
     avatar: user.avatar || 'RF',
     role: user.role || 'admin',
-    roleName: user.roleName || 'Dashboard',
+    roleName: user.roleName || user.role_name || 'Dashboard',
   }
-  const navigation = navByRole[safeUser.role] || navByRole.admin
+  const navigation = getRoutesForRole(safeUser.role)
+  const currentRoute = getRouteForRolePage(safeUser.role, activePage)
 
   return (
     <div className="app-shell">
@@ -71,8 +46,8 @@ export default function Layout({ user = {}, activePage, setActivePage, onLogout,
       <main className="workspace">
         <header className="topbar">
           <div>
-            <span className="breadcrumb">Sistem operasional live database</span>
-            <h1>{safeUser.roleName}</h1>
+            <span className="breadcrumb">{safeUser.roleName} / {currentRoute.label}</span>
+            <h1>{currentRoute.title}</h1>
           </div>
           <span className="role-pill">{safeUser.roleName}</span>
         </header>

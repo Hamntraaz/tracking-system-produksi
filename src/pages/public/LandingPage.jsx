@@ -12,9 +12,24 @@ const publicPages = [
   { key: 'kontak', label: 'Kontak' },
 ]
 
-export default function LandingPage({ onLogin, deviceLocation, locationStatus, locationError, requestLocation }) {
-  const [loginOpen, setLoginOpen] = useState(false)
-  const [activePage, setActivePage] = useState('home')
+export default function LandingPage({ onLogin, activePage: controlledActivePage = 'home', onNavigate, loginOpen: controlledLoginOpen, onLoginOpenChange, deviceLocation, locationStatus, locationError, requestLocation }) {
+  const [internalLoginOpen, setInternalLoginOpen] = useState(false)
+  const [internalActivePage, setInternalActivePage] = useState('home')
+
+
+  const activePage = onNavigate ? controlledActivePage : internalActivePage
+  const loginOpen = typeof controlledLoginOpen === 'boolean' ? controlledLoginOpen : internalLoginOpen
+
+  function navigatePage(page) {
+    if (onNavigate) onNavigate(page)
+    else setInternalActivePage(page)
+  }
+
+  function changeLoginOpen(open) {
+    if (onLoginOpenChange) onLoginOpenChange(open)
+    else setInternalLoginOpen(open)
+  }
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -42,16 +57,16 @@ export default function LandingPage({ onLogin, deviceLocation, locationStatus, l
   return (
     <main className="landing-page clean-landing">
       <nav className="landing-nav page-nav">
-        <button className="nav-brand brand-button" type="button" onClick={() => setActivePage('home')}>
+        <button className="nav-brand brand-button" type="button" onClick={() => navigatePage('home')}>
           <img src={logo} alt="Logo Rafiza Fried Chicken" />
           <div><strong>Rafiza Fried Chicken</strong><span>Operational Partner System</span></div>
         </button>
         <div className="nav-links segmented-links">
           {publicPages.map((page) => (
-            <button type="button" key={page.key} className={activePage === page.key ? 'active' : ''} onClick={() => setActivePage(page.key)}>{page.label}</button>
+            <button type="button" key={page.key} className={activePage === page.key ? 'active' : ''} onClick={() => navigatePage(page.key)}>{page.label}</button>
           ))}
         </div>
-        <button type="button" className="nav-button" onClick={() => setLoginOpen(true)}>Masuk Sistem</button>
+        <button type="button" className="nav-button" onClick={() => changeLoginOpen(true)}>Masuk Sistem</button>
       </nav>
 
       {activePage === 'home' && (
@@ -64,8 +79,8 @@ export default function LandingPage({ onLogin, deviceLocation, locationStatus, l
               kurir menjalankan pengiriman, lalu manajemen memantau proses secara real-time.
             </p>
             <div className="hero-actions">
-              <button className="primary-action" type="button" onClick={() => setActivePage('mitra')}>Informasi Kemitraan</button>
-              <button type="button" className="secondary-action" onClick={() => setActivePage('kontak')}>Hubungi Rafiza</button>
+              <button className="primary-action" type="button" onClick={() => navigatePage('mitra')}>Informasi Kemitraan</button>
+              <button type="button" className="secondary-action" onClick={() => navigatePage('kontak')}>Hubungi Rafiza</button>
             </div>
             <div className="hero-kpi">
               <div><b>Tracking GPS</b><span>Berbasis perangkat kurir</span></div>
@@ -120,7 +135,7 @@ export default function LandingPage({ onLogin, deviceLocation, locationStatus, l
                 <h3>{pkg.name}</h3>
                 <strong>{pkg.price}</strong>
                 <ul>{pkg.items.map((item) => <li key={item}><Icon name="check" size={16} /> {item}</li>)}</ul>
-                <button type="button" className={pkg.highlighted ? 'primary-action full' : 'secondary-action full'} onClick={() => setActivePage('kontak')}>Hubungi WhatsApp</button>
+                <button type="button" className={pkg.highlighted ? 'primary-action full' : 'secondary-action full'} onClick={() => navigatePage('kontak')}>Hubungi WhatsApp</button>
               </article>
             ))}
           </div>
@@ -135,7 +150,7 @@ export default function LandingPage({ onLogin, deviceLocation, locationStatus, l
             <p>Silakan menghubungi kontak resmi untuk konsultasi paket, kebutuhan outlet, serta informasi implementasi sistem operasional.</p>
             <div className="hero-actions contact-actions">
               <a className="primary-action link-action" href="https://wa.me/6280000000000" target="_blank" rel="noreferrer">Hubungi WhatsApp</a>
-              <button type="button" className="secondary-action" onClick={() => setLoginOpen(true)}>Masuk Sistem</button>
+              <button type="button" className="secondary-action" onClick={() => changeLoginOpen(true)}>Masuk Sistem</button>
             </div>
           </div>
           <div className="contact-list">
@@ -149,7 +164,7 @@ export default function LandingPage({ onLogin, deviceLocation, locationStatus, l
         <span>Rafiza Fried Chicken • Operational Partner System</span>
       </footer>
 
-      <Modal open={loginOpen} title="Masuk Dashboard Operasional" onClose={() => setLoginOpen(false)}>
+      <Modal open={loginOpen} title="Masuk Dashboard Operasional" onClose={() => changeLoginOpen(false)}>
         <form className="login-form" onSubmit={submitHandler}>
           <div className="login-brand-inline"><img src={logo} alt="Rafiza" /><div><b>Rafiza Operational System</b><span>Masuk sesuai hak akses pengguna</span></div></div>
           <label>Email</label>
