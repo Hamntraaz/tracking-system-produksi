@@ -6,8 +6,14 @@ export const publicRoutes = [
 ]
 
 export const privateRoutes = {
-  admin: [
-    { key: 'dashboard', path: 'dashboard', label: 'Dashboard', title: 'Dashboard Admin', icon: 'dashboard' },
+  manager: [
+    { key: 'dashboard', path: 'dashboard', label: 'Dashboard', title: 'Dashboard Manajemen', icon: 'dashboard' },
+    { key: 'accounts', path: 'accounts', label: 'Akun & Mitra', title: 'Akun & Mitra', icon: 'supplier', aliases: ['akun-mitra'] },
+    { key: 'monitoring', path: 'monitoring', label: 'Monitoring', title: 'Monitoring Operasional', icon: 'chart' },
+    { key: 'reports', path: 'reports', label: 'Laporan', title: 'Laporan Operasional', icon: 'report', aliases: ['laporan'] },
+  ],
+  warehouse: [
+    { key: 'dashboard', path: 'dashboard', label: 'Dashboard', title: 'Dashboard Gudang/Cabang', icon: 'dashboard' },
     { key: 'stocks', path: 'stocks', label: 'Stok Bahan', title: 'Stok Bahan Baku', icon: 'stock', aliases: ['stok-bahan'] },
     { key: 'usage', path: 'usage', label: 'Pemakaian Produksi', title: 'Pemakaian Produksi', icon: 'report', aliases: ['pemakaian-produksi'] },
     { key: 'orders', path: 'orders', label: 'Pesanan', title: 'Permintaan Barang', icon: 'order', aliases: ['pesanan'] },
@@ -24,12 +30,6 @@ export const privateRoutes = {
     { key: 'tasks', path: 'tasks', label: 'Tugas Antar', title: 'Tugas Pengiriman', icon: 'courier', aliases: ['tugas-antar'] },
     { key: 'tracking', path: 'tracking', label: 'Maps', title: 'Live Tracking', icon: 'map', aliases: ['maps'] },
   ],
-  manager: [
-    { key: 'dashboard', path: 'dashboard', label: 'Dashboard', title: 'Dashboard Manajemen', icon: 'dashboard' },
-    { key: 'accounts', path: 'accounts', label: 'Akun & Mitra', title: 'Akun & Mitra', icon: 'supplier', aliases: ['akun-mitra'] },
-    { key: 'monitoring', path: 'monitoring', label: 'Monitoring', title: 'Monitoring Operasional', icon: 'chart' },
-    { key: 'reports', path: 'reports', label: 'Laporan', title: 'Laporan Operasional', icon: 'report', aliases: ['laporan'] },
-  ],
 }
 
 export const validRoles = Object.keys(privateRoutes)
@@ -37,6 +37,11 @@ export const validRoles = Object.keys(privateRoutes)
 export function normalizePathname(pathname = '/') {
   const clean = pathname.split('?')[0].split('#')[0].replace(/\/+/g, '/').replace(/\/+$/, '')
   return clean || '/'
+}
+
+export function normalizeRole(role) {
+  if (role === 'admin') return 'warehouse'
+  return role
 }
 
 export function getPublicRouteByKey(key) {
@@ -49,7 +54,7 @@ export function getPublicRouteByPath(pathname) {
 }
 
 export function getRoutesForRole(role) {
-  return privateRoutes[role] || privateRoutes.admin
+  return privateRoutes[normalizeRole(role)] || privateRoutes.manager
 }
 
 export function getRouteForRolePage(role, pageKey = 'dashboard') {
@@ -58,7 +63,7 @@ export function getRouteForRolePage(role, pageKey = 'dashboard') {
 }
 
 export function isValidRole(role) {
-  return Boolean(privateRoutes[role])
+  return Boolean(privateRoutes[normalizeRole(role)])
 }
 
 export function isValidPageForRole(role, pageKey) {
@@ -73,14 +78,15 @@ export function routeKeyFromSegment(role, segment = 'dashboard') {
 }
 
 export function buildPrivatePath(role, pageKey = 'dashboard') {
-  const safeRole = isValidRole(role) ? role : 'admin'
+  const safeRole = isValidRole(role) ? normalizeRole(role) : 'manager'
   const route = getRouteForRolePage(safeRole, pageKey)
   return `/${safeRole}/${route.path}`
 }
 
 export function parsePrivatePath(pathname) {
   const parts = normalizePathname(pathname).split('/').filter(Boolean)
-  const [role, segment = 'dashboard'] = parts
+  let [role, segment = 'dashboard'] = parts
+  role = normalizeRole(role)
   if (!isValidRole(role)) return null
   return { role, page: routeKeyFromSegment(role, segment) }
 }

@@ -7,6 +7,7 @@ import {
   createManagedWarehouse,
   deleteManagedSupplier,
   deleteManagedWarehouse,
+  updateManagedAccountStatus,
   updateManagedSupplier,
   updateManagedWarehouse,
 } from '../../services/api'
@@ -17,6 +18,7 @@ const defaultSupplierForm = {
   material_type: '',
   material_unit: '',
   phone: '',
+  address: '',
   email: '',
   password: '12345678',
   status: 'Aktif',
@@ -25,11 +27,18 @@ const defaultSupplierForm = {
 const defaultWarehouseForm = {
   id: '',
   warehouse_name: '',
-  admin_name: '',
+  pic_name: '',
   address: '',
   email: '',
   password: '12345678',
   status: 'Aktif',
+}
+
+const roleLabels = {
+  manager: 'Manager',
+  warehouse: 'Gudang/Cabang',
+  supplier: 'Supplier',
+  courier: 'Kurir',
 }
 
 function findUserBySupplier(users, supplierId) {
@@ -37,7 +46,7 @@ function findUserBySupplier(users, supplierId) {
 }
 
 function findUserByWarehouse(users, warehouseId) {
-  return users.find((user) => user.role === 'admin' && String(user.warehouse_id || '') === String(warehouseId || ''))
+  return users.find((user) => user.role === 'warehouse' && String(user.warehouse_id || '') === String(warehouseId || ''))
 }
 
 export default function ManagerAccounts({ data = {}, refreshData }) {
@@ -52,15 +61,12 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
   const [message, setMessage] = useState('')
 
   const supplierAccounts = useMemo(() => users.filter((user) => user.role === 'supplier'), [users])
-  const warehouseAccounts = useMemo(() => users.filter((user) => user.role === 'admin'), [users])
+  const warehouseAccounts = useMemo(() => users.filter((user) => user.role === 'warehouse'), [users])
+  const activeAccounts = useMemo(() => users.filter((user) => (user.status || 'Aktif') === 'Aktif'), [users])
+  const nonActiveAccounts = useMemo(() => users.filter((user) => (user.status || 'Aktif') !== 'Aktif'), [users])
 
-  function updateSupplier(key, value) {
-    setSupplierForm((prev) => ({ ...prev, [key]: value }))
-  }
-
-  function updateWarehouse(key, value) {
-    setWarehouseForm((prev) => ({ ...prev, [key]: value }))
-  }
+  function updateSupplier(key, value) { setSupplierForm((prev) => ({ ...prev, [key]: value })) }
+  function updateWarehouse(key, value) { setWarehouseForm((prev) => ({ ...prev, [key]: value })) }
 
   function openCreateSupplier() {
     setSupplierForm(defaultSupplierForm)
@@ -75,9 +81,10 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
       material_type: row.material_type || '',
       material_unit: row.material_unit || '',
       phone: row.phone || '',
+      address: row.address || '',
       email: account?.email || '',
       password: '',
-      status: row.status || 'Aktif',
+      status: row.status || account?.status || 'Aktif',
     })
     setModal('supplier-edit')
   }
@@ -97,17 +104,30 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
     setWarehouseForm({
       id: row.id,
       warehouse_name: row.name || '',
-      admin_name: account?.name || '',
+      pic_name: account?.name || '',
       address: row.address || '',
       email: account?.email || '',
       password: '',
-      status: row.status || 'Aktif',
+      status: row.status || account?.status || 'Aktif',
     })
     setModal('warehouse-edit')
   }
 
   function openViewWarehouse(row) {
     setSelectedItem({ type: 'warehouse', data: row, account: findUserByWarehouse(users, row.id) })
+    setModal('view')
+  }
+
+  function editAccount(row) {
+    if (row.role === 'supplier' && row.supplier_id) {
+      const supplier = suppliers.find((item) => String(item.id) === String(row.supplier_id))
+      if (supplier) return openEditSupplier(supplier)
+    }
+    if (row.role === 'warehouse' && row.warehouse_id) {
+      const warehouse = warehouses.find((item) => String(item.id) === String(row.warehouse_id))
+      if (warehouse) return openEditWarehouse(warehouse)
+    }
+    setSelectedItem({ type: 'account', data: row, account: row })
     setModal('view')
   }
 
@@ -136,11 +156,12 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
     setMessage('')
     try {
       const isEdit = Boolean(warehouseForm.id)
-      if (isEdit) await updateManagedWarehouse(warehouseForm)
-      else await createManagedWarehouse(warehouseForm)
+      const payload = { ...warehouseForm, admin_name: warehouseForm.pic_name }
+      if (isEdit) await updateManagedWarehouse(payload)
+      else await createManagedWarehouse(payload)
       setWarehouseForm(defaultWarehouseForm)
       setModal(null)
-      setMessage(isEdit ? 'Gudang/cabang dan akun admin berhasil diperbarui.' : 'Gudang/cabang dan akun admin berhasil dibuat.')
+      setMessage(isEdit ? 'Gudang/cabang dan akun login berhasil diperbarui.' : 'Gudang/cabang dan akun login berhasil dibuat.')
       await refreshData?.()
     } catch (error) {
       setMessage(error.message || 'Gagal menyimpan akun gudang/cabang.')
@@ -149,33 +170,56 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
     }
   }
 
-  async function deactivateSupplier(row) {
-    const ok = window.confirm(`Nonaktifkan supplier ${row.name}? Akun login supplier juga akan dinonaktifkan.`)
+  async function setSupplierStatus(row, status) {
+    const ok = window.confirm(`${status === 'Aktif' ? 'Aktifkan' : 'Nonaktifkan'} supplier ${row.name}? Akun login supplier juga ikut berubah.`)
     if (!ok) return
     setSaving(true)
     setMessage('')
     try {
-      await deleteManagedSupplier(row.id)
-      setMessage('Supplier berhasil dinonaktifkan. Riwayat transaksi tetap aman.')
+      if (status === 'Nonaktif') await deleteManagedSupplier(row.id)
+      else await updateManagedSupplier({ ...row, company_name: row.name, status: 'Aktif' })
+      setMessage(`Supplier berhasil ${status === 'Aktif' ? 'diaktifkan' : 'dinonaktifkan'}.`)
       await refreshData?.()
     } catch (error) {
-      setMessage(error.message || 'Gagal menonaktifkan supplier.')
+      setMessage(error.message || 'Gagal mengubah status supplier.')
     } finally {
       setSaving(false)
     }
   }
 
-  async function deactivateWarehouse(row) {
-    const ok = window.confirm(`Nonaktifkan gudang/cabang ${row.name}? Akun admin gudang juga akan dinonaktifkan.`)
+  async function setWarehouseStatus(row, status) {
+    const ok = window.confirm(`${status === 'Aktif' ? 'Aktifkan' : 'Nonaktifkan'} gudang/cabang ${row.name}? Akun login gudang/cabang juga ikut berubah.`)
     if (!ok) return
     setSaving(true)
     setMessage('')
     try {
-      await deleteManagedWarehouse(row.id)
-      setMessage('Gudang/cabang berhasil dinonaktifkan. Riwayat transaksi tetap aman.')
+      if (status === 'Nonaktif') await deleteManagedWarehouse(row.id)
+      else await updateManagedWarehouse({ ...row, warehouse_name: row.name, status: 'Aktif' })
+      setMessage(`Gudang/cabang berhasil ${status === 'Aktif' ? 'diaktifkan' : 'dinonaktifkan'}.`)
       await refreshData?.()
     } catch (error) {
-      setMessage(error.message || 'Gagal menonaktifkan gudang/cabang.')
+      setMessage(error.message || 'Gagal mengubah status gudang/cabang.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function toggleAccount(row) {
+    if (row.role === 'manager') {
+      setMessage('Akun manager utama tidak dinonaktifkan dari tabel ini agar sistem tidak terkunci.')
+      return
+    }
+    const nextStatus = (row.status || 'Aktif') === 'Aktif' ? 'Nonaktif' : 'Aktif'
+    const ok = window.confirm(`${nextStatus === 'Aktif' ? 'Aktifkan' : 'Nonaktifkan'} akun ${row.email}?`)
+    if (!ok) return
+    setSaving(true)
+    setMessage('')
+    try {
+      await updateManagedAccountStatus({ id: row.id, status: nextStatus })
+      setMessage(`Akun ${row.email} berhasil ${nextStatus === 'Aktif' ? 'diaktifkan' : 'dinonaktifkan'}.`)
+      await refreshData?.()
+    } catch (error) {
+      setMessage(error.message || 'Gagal mengubah status akun.')
     } finally {
       setSaving(false)
     }
@@ -191,41 +235,59 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
     {
       key: 'actions',
       label: 'Aksi',
-      render: (row) => (
-        <div className="table-actions">
-          <button type="button" onClick={() => openViewSupplier(row)}>Lihat</button>
-          <button type="button" className="soft-action" onClick={() => openEditSupplier(row)}>Edit</button>
-          <button type="button" className="soft-danger" onClick={() => deactivateSupplier(row)} disabled={saving}>Nonaktif</button>
-        </div>
-      ),
+      render: (row) => {
+        const isActive = (row.status || 'Aktif') === 'Aktif'
+        return (
+          <div className="table-actions">
+            <button type="button" onClick={() => openViewSupplier(row)}>Lihat</button>
+            <button type="button" className="soft-action" onClick={() => openEditSupplier(row)}>Edit</button>
+            <button type="button" className={isActive ? 'soft-danger' : 'soft-success'} onClick={() => setSupplierStatus(row, isActive ? 'Nonaktif' : 'Aktif')} disabled={saving}>{isActive ? 'Nonaktif' : 'Aktifkan'}</button>
+          </div>
+        )
+      },
     },
   ]
 
   const warehouseColumns = [
     { key: 'name', label: 'Gudang/Cabang' },
     { key: 'address', label: 'Alamat' },
-    { key: 'account', label: 'Akun Admin', render: (row) => findUserByWarehouse(users, row.id)?.email || '-' },
+    { key: 'account', label: 'Akun Login', render: (row) => findUserByWarehouse(users, row.id)?.email || '-' },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status || 'Aktif'}</StatusBadge> },
     {
       key: 'actions',
       label: 'Aksi',
-      render: (row) => (
-        <div className="table-actions">
-          <button type="button" onClick={() => openViewWarehouse(row)}>Lihat</button>
-          <button type="button" className="soft-action" onClick={() => openEditWarehouse(row)}>Edit</button>
-          <button type="button" className="soft-danger" onClick={() => deactivateWarehouse(row)} disabled={saving}>Nonaktif</button>
-        </div>
-      ),
+      render: (row) => {
+        const isActive = (row.status || 'Aktif') === 'Aktif'
+        return (
+          <div className="table-actions">
+            <button type="button" onClick={() => openViewWarehouse(row)}>Lihat</button>
+            <button type="button" className="soft-action" onClick={() => openEditWarehouse(row)}>Edit</button>
+            <button type="button" className={isActive ? 'soft-danger' : 'soft-success'} onClick={() => setWarehouseStatus(row, isActive ? 'Nonaktif' : 'Aktif')} disabled={saving}>{isActive ? 'Nonaktif' : 'Aktifkan'}</button>
+          </div>
+        )
+      },
     },
   ]
 
   const accountColumns = [
     { key: 'name', label: 'Nama Akun' },
     { key: 'email', label: 'Email' },
-    { key: 'role', label: 'Role' },
-    { key: 'supplier_name', label: 'Supplier', render: (row) => row.supplier_name || '-' },
-    { key: 'warehouse_name', label: 'Gudang/Cabang', render: (row) => row.warehouse_name || '-' },
+    { key: 'role', label: 'Role', render: (row) => roleLabels[row.role] || row.role },
+    { key: 'linked', label: 'Terhubung ke', render: (row) => row.supplier_name || row.warehouse_name || row.courier_name || row.branch || '-' },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status || 'Aktif'}</StatusBadge> },
+    {
+      key: 'actions',
+      label: 'Aksi',
+      render: (row) => {
+        const isActive = (row.status || 'Aktif') === 'Aktif'
+        return (
+          <div className="table-actions">
+            <button type="button" onClick={() => editAccount(row)}>Detail/Edit</button>
+            <button type="button" className={isActive ? 'soft-danger' : 'soft-success'} onClick={() => toggleAccount(row)} disabled={saving || row.role === 'manager'}>{isActive ? 'Nonaktif' : 'Aktifkan'}</button>
+          </div>
+        )
+      },
+    },
   ]
 
   const isSupplierModal = modal === 'supplier-create' || modal === 'supplier-edit'
@@ -237,7 +299,7 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
         <div>
           <span>Manajemen</span>
           <h2>Akun & Mitra Operasional</h2>
-          <p>Manajer mengelola supplier, gudang/cabang, dan akun sistem. Semua perubahan tersimpan ke database.</p>
+          <p>Manager memiliki kontrol penuh untuk membuat, mengedit, mengaktifkan, dan menonaktifkan supplier serta gudang/cabang. Kurir tetap dibuat dari akun supplier.</p>
         </div>
         <div className="header-actions">
           <button type="button" onClick={openCreateWarehouse}>+ Gudang/Cabang</button>
@@ -253,12 +315,14 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
           <ResponsiveTable columns={supplierColumns} rows={suppliers} />
         </article>
         <article className="panel-card">
-          <div className="panel-head"><div><span>Ringkasan</span><h3>Jumlah Akun</h3></div></div>
+          <div className="panel-head"><div><span>Ringkasan</span><h3>Kontrol Akun</h3></div></div>
           <div className="detail-stack">
             <p><b>Supplier</b><span>{suppliers.length} mitra</span></p>
             <p><b>Gudang/Cabang</b><span>{warehouses.length} lokasi</span></p>
+            <p><b>Akun Aktif</b><span>{activeAccounts.length} akun</span></p>
+            <p><b>Akun Nonaktif</b><span>{nonActiveAccounts.length} akun</span></p>
             <p><b>Akun Supplier</b><span>{supplierAccounts.length} akun</span></p>
-            <p><b>Akun Gudang</b><span>{warehouseAccounts.length} akun</span></p>
+            <p><b>Akun Gudang/Cabang</b><span>{warehouseAccounts.length} akun</span></p>
           </div>
         </article>
       </section>
@@ -283,6 +347,8 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
           <input value={supplierForm.material_unit} onChange={(e) => updateSupplier('material_unit', e.target.value)} placeholder="Kg / Liter / Botol / Dus" required />
           <label>No HP / Kontak</label>
           <input value={supplierForm.phone} onChange={(e) => updateSupplier('phone', e.target.value)} placeholder="08xxxxxxxxxx" />
+          <label>Alamat Supplier</label>
+          <textarea value={supplierForm.address} onChange={(e) => updateSupplier('address', e.target.value)} placeholder="Alamat supplier" />
           <label>Email Login Supplier</label>
           <input type="email" value={supplierForm.email} onChange={(e) => updateSupplier('email', e.target.value)} placeholder="supplier@perusahaan.com" required />
           <label>Password {supplierForm.id ? '(kosongkan jika tidak diganti)' : ''}</label>
@@ -293,16 +359,16 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
         </form>
       </Modal>
 
-      <Modal open={isWarehouseModal} title={warehouseForm.id ? 'Edit Gudang/Cabang & Akun Admin' : 'Tambah Gudang/Cabang & Akun Admin'} onClose={() => setModal(null)} size="lg">
+      <Modal open={isWarehouseModal} title={warehouseForm.id ? 'Edit Gudang/Cabang & Akun Login' : 'Tambah Gudang/Cabang & Akun Login'} onClose={() => setModal(null)} size="lg">
         <form className="mini-form modal-form-grid" onSubmit={submitWarehouse}>
           <label>Nama Gudang/Cabang</label>
           <input value={warehouseForm.warehouse_name} onChange={(e) => updateWarehouse('warehouse_name', e.target.value)} placeholder="Contoh: Cabang Rafiza Cibinong" required />
-          <label>Nama Admin Gudang</label>
-          <input value={warehouseForm.admin_name} onChange={(e) => updateWarehouse('admin_name', e.target.value)} placeholder="Contoh: Admin Cabang Cibinong" />
+          <label>Nama PIC Gudang/Cabang</label>
+          <input value={warehouseForm.pic_name} onChange={(e) => updateWarehouse('pic_name', e.target.value)} placeholder="Contoh: PIC Cabang Cibinong" />
           <label>Alamat Gudang/Cabang</label>
           <textarea value={warehouseForm.address} onChange={(e) => updateWarehouse('address', e.target.value)} placeholder="Alamat gudang/cabang" />
-          <label>Email Login Admin</label>
-          <input type="email" value={warehouseForm.email} onChange={(e) => updateWarehouse('email', e.target.value)} placeholder="admin.cabang@email.com" required />
+          <label>Email Login Gudang/Cabang</label>
+          <input type="email" value={warehouseForm.email} onChange={(e) => updateWarehouse('email', e.target.value)} placeholder="gudang.cabang@email.com" required />
           <label>Password {warehouseForm.id ? '(kosongkan jika tidak diganti)' : ''}</label>
           <input value={warehouseForm.password} onChange={(e) => updateWarehouse('password', e.target.value)} required={!warehouseForm.id} placeholder={warehouseForm.id ? 'Kosongkan jika tidak diganti' : '12345678'} />
           <label>Status</label>
@@ -314,7 +380,7 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
       <Modal open={modal === 'view'} title="Detail Akun & Mitra" onClose={() => setModal(null)} size="lg">
         {selectedItem && (
           <div className="detail-stack account-detail-modal">
-            <p><b>Jenis</b><span>{selectedItem.type === 'supplier' ? 'Supplier' : 'Gudang/Cabang'}</span></p>
+            <p><b>Jenis</b><span>{selectedItem.type === 'supplier' ? 'Supplier' : selectedItem.type === 'warehouse' ? 'Gudang/Cabang' : 'Akun Sistem'}</span></p>
             <p><b>Nama</b><span>{selectedItem.data?.name || '-'}</span></p>
             {selectedItem.type === 'supplier' && <p><b>Bahan Baku</b><span>{selectedItem.data?.material_type || '-'}</span></p>}
             {selectedItem.type === 'supplier' && <p><b>Satuan</b><span>{selectedItem.data?.material_unit || '-'}</span></p>}
@@ -322,6 +388,7 @@ export default function ManagerAccounts({ data = {}, refreshData }) {
             {selectedItem.type === 'warehouse' && <p><b>Alamat</b><span>{selectedItem.data?.address || '-'}</span></p>}
             <p><b>Email Login</b><span>{selectedItem.account?.email || '-'}</span></p>
             <p><b>Nama Akun</b><span>{selectedItem.account?.name || '-'}</span></p>
+            <p><b>Role</b><span>{roleLabels[selectedItem.account?.role] || selectedItem.account?.role || '-'}</span></p>
             <p><b>Status</b><span>{selectedItem.data?.status || selectedItem.account?.status || '-'}</span></p>
           </div>
         )}

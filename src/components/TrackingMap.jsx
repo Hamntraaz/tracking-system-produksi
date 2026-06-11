@@ -30,7 +30,7 @@ function driverMarker(label = 'Kurir Live') {
 
 function viewerLocationLabel(user) {
   const name = user?.name ? ` - ${user.name}` : ''
-  if (user?.role === 'admin') return `Perangkat Gudang/Cabang${name}`
+  if (user?.role === 'warehouse') return `Perangkat Gudang/Cabang${name}`
   if (user?.role === 'supplier') return `Perangkat Supplier${name}`
   if (user?.role === 'courier') return `Perangkat Kurir Live${name}`
   if (user?.role === 'manager') return `Perangkat Manajemen${name}`

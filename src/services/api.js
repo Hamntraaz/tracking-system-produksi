@@ -134,3 +134,8 @@ export function updateManagedWarehouse(payload) {
 export function deleteManagedWarehouse(id) {
   return request('/manager-warehouses-delete', { method: 'POST', body: JSON.stringify({ id }) })
 }
+
+
+export function updateManagedAccountStatus(payload) {
+  return request('/manager-accounts-status', { method: 'POST', body: JSON.stringify(payload) })
+}

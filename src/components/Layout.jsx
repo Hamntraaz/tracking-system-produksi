@@ -1,13 +1,13 @@
 import logo from '../assets/rafiza-logo.png'
 import { Icon } from './Icons'
-import { getRouteForRolePage, getRoutesForRole } from '../routes'
+import { getRouteForRolePage, getRoutesForRole, normalizeRole } from '../routes'
 
 export default function Layout({ user = {}, activePage, setActivePage, onLogout, onRefresh, loading, children }) {
   const safeUser = {
     name: user.name || 'User Rafiza',
     avatar: user.avatar || 'RF',
-    role: user.role || 'admin',
-    roleName: user.roleName || user.role_name || 'Dashboard',
+    role: normalizeRole(user.role || 'warehouse'),
+    roleName: user.roleName || user.role_name || (normalizeRole(user.role) === 'warehouse' ? 'Gudang/Cabang' : 'Dashboard'),
   }
   const navigation = getRoutesForRole(safeUser.role)
   const currentRoute = getRouteForRolePage(safeUser.role, activePage)

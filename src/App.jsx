@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Layout from './components/Layout'
 import LandingPage from './pages/public/LandingPage'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminStocks from './pages/admin/AdminStocks'
-import AdminOrders from './pages/admin/AdminOrders'
-import AdminProductionUsage from './pages/admin/AdminProductionUsage'
-import AdminTracking from './pages/admin/AdminTracking'
+import WarehouseDashboard from './pages/warehouse/WarehouseDashboard'
+import WarehouseStocks from './pages/warehouse/WarehouseStocks'
+import WarehouseOrders from './pages/warehouse/WarehouseOrders'
+import WarehouseProductionUsage from './pages/warehouse/WarehouseProductionUsage'
+import WarehouseTracking from './pages/warehouse/WarehouseTracking'
 import SupplierDashboard from './pages/supplier/SupplierDashboard'
 import SupplierOrders from './pages/supplier/SupplierOrders'
 import SupplierCouriers from './pages/supplier/SupplierCouriers'
@@ -27,6 +27,7 @@ import {
   isValidPageForRole,
   normalizePathname,
   parsePrivatePath,
+  normalizeRole,
 } from './routes'
 
 const emptyData = {
@@ -68,7 +69,9 @@ function normalizeData(payload) {
 function getStoredUser() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return { ...parsed, role: normalizeRole(parsed.role) }
   } catch {
     return null
   }
@@ -213,8 +216,8 @@ export default function App() {
       id: safeUser.id || 0,
       name: safeUser.name || 'User Rafiza',
       email: safeUser.email || '-',
-      role: safeUser.role || 'admin',
-      roleName: safeUser.roleName || safeUser.role_name || 'Dashboard',
+      role: normalizeRole(safeUser.role || 'warehouse'),
+      roleName: safeUser.roleName || safeUser.role_name || (normalizeRole(safeUser.role) === 'warehouse' ? 'Gudang/Cabang' : 'Dashboard'),
       branch: safeUser.branch || 'Rafiza Fried Chicken',
       avatar: safeUser.avatar || 'RF',
       supplier_id: safeUser.supplier_id || null,
@@ -356,12 +359,12 @@ export default function App() {
   }
 
   const pageMap = useMemo(() => ({
-    admin: {
-      dashboard: <AdminDashboard {...pageProps} />,
-      stocks: <AdminStocks {...pageProps} />,
-      usage: <AdminProductionUsage {...pageProps} />,
-      orders: <AdminOrders {...pageProps} />,
-      tracking: <AdminTracking {...pageProps} />,
+    warehouse: {
+      dashboard: <WarehouseDashboard {...pageProps} />,
+      stocks: <WarehouseStocks {...pageProps} />,
+      usage: <WarehouseProductionUsage {...pageProps} />,
+      orders: <WarehouseOrders {...pageProps} />,
+      tracking: <WarehouseTracking {...pageProps} />,
     },
     supplier: {
       dashboard: <SupplierDashboard {...pageProps} />,
@@ -383,7 +386,7 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [data, loading, apiError, user, deviceLocation, locationStatus, locationError])
 
-  const rolePages = user ? (pageMap[user.role] || pageMap.admin) : null
+  const rolePages = user ? (pageMap[normalizeRole(user.role)] || pageMap.manager) : null
   const currentPage = rolePages ? (rolePages[activePage] || rolePages.dashboard) : null
 
   if (!user) {
