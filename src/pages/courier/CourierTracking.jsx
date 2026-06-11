@@ -62,7 +62,7 @@ function SwipeToConfirm({ disabled, onUnlocked }) {
 }
 
 export default function CourierTracking({ data = {}, user, deviceLocation, locationStatus, locationError, requestLocation, startWatching, stopWatching, refreshData }) {
-  const delivery = data.deliveries?.find((item) => item.courier_id) || data.deliveries?.[0]
+  const delivery = (data.deliveries || []).find((item) => !user?.courier_id || String(item.courier_id || '') === String(user.courier_id)) || null
   const [trackingOn, setTrackingOn] = useState(false)
   const [sendStatus, setSendStatus] = useState('Menunggu instruksi perjalanan.')
   const [proofPhoto, setProofPhoto] = useState(delivery?.proof_photo || '')
@@ -143,17 +143,13 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
       setSendStatus('Ukuran bukti foto terlalu besar. Gunakan foto maksimal 15MB. Foto akan dikompres otomatis sebelum upload.')
       return
     }
-    if (!isCloudinaryReady()) {
-      setSendStatus('Cloudinary belum dikonfigurasi. Isi Cloud Name dan Upload Preset di frontend/.env.')
-      return
-    }
     const localPreview = URL.createObjectURL(file)
     setUploadingProof(true)
     setUploadResult(null)
     setProofName(file.name)
     setProofPreview(localPreview)
     setUploadModal({ open: true, stage: 'preparing', progress: 4, message: 'Menyiapkan foto bukti...' })
-    setSendStatus('Mengupload bukti foto ke Cloudinary...')
+    setSendStatus(isCloudinaryReady() ? 'Mengupload bukti foto ke Cloudinary...' : 'Menyimpan bukti foto ke database lokal...')
     try {
       const uploaded = await uploadProofToCloudinary(file, {
         onProgress: (info) => setUploadModal((prev) => ({
@@ -166,8 +162,8 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
       setProofPhoto(uploaded.url)
       setProofPreview(uploaded.url)
       setUploadResult(uploaded)
-      setUploadModal({ open: true, stage: 'success', progress: 100, message: 'Bukti foto berhasil diupload ke Cloudinary.' })
-      setSendStatus('Bukti foto berhasil tersimpan di Cloudinary. Swipe konfirmasi pengiriman sudah aktif.')
+      setUploadModal({ open: true, stage: 'success', progress: 100, message: uploaded.storage === 'database' ? 'Bukti foto berhasil disimpan di database.' : 'Bukti foto berhasil diupload ke Cloudinary.' })
+      setSendStatus(uploaded.storage === 'database' ? 'Bukti foto berhasil tersimpan di database. Swipe konfirmasi pengiriman sudah aktif.' : 'Bukti foto berhasil tersimpan di Cloudinary. Swipe konfirmasi pengiriman sudah aktif.')
     } catch (error) {
       setProofPhoto('')
       setUploadModal({ open: true, stage: 'error', progress: 0, message: error.message || 'Upload bukti foto gagal.' })
@@ -197,7 +193,7 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
       setTrackingOn(false)
       setConfirmVisible(false)
       setConfirmChecked(false)
-      setSendStatus('Pengiriman selesai. Bukti foto dapat dilihat oleh gudang, supplier, dan manajemen.')
+      setSendStatus('Pengiriman selesai. Bukti foto dapat dilihat oleh gudang dan manajemen, serta supplier untuk pengiriman supplier ke gudang.')
       await refreshData?.()
     } catch (error) {
       setSendStatus(error.message || 'Gagal menyelesaikan pengiriman.')
@@ -284,7 +280,7 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
           </div>
 
           {locationError && <p className="error-box">{locationError}</p>}
-          {!isCloudinaryReady() && <p className="warning-box">Cloudinary belum dikonfigurasi. Upload bukti foto membutuhkan Cloud Name dan Upload Preset.</p>}
+          {!isCloudinaryReady() && <p className="warning-box">Cloudinary belum dikonfigurasi. Sistem memakai mode gratis: foto dikompres lalu disimpan di database.</p>}
         </article>
       </section>
 
@@ -310,7 +306,7 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
           {proofPreview && <img className="upload-preview" src={proofPreview} alt="Preview bukti pengiriman" />}
           {uploadModal.stage === 'success' && uploadResult && (
             <div className="upload-result-detail">
-              <span>Cloudinary tersimpan</span>
+              <span>{uploadResult.storage === 'database' ? 'Database lokal' : 'Cloudinary tersimpan'}</span>
               <span>{uploadResult.width} × {uploadResult.height}px</span>
               <span>{uploadResult.uploadedSize ? `${Math.max(1, Math.round(uploadResult.uploadedSize / 1024))} KB` : 'Ukuran aman'}</span>
             </div>

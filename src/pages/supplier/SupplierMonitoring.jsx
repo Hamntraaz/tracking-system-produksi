@@ -9,7 +9,7 @@ function isActiveDelivery(row) {
 }
 
 export default function SupplierMonitoring({ data = {}, deviceLocation, refreshData, user }) {
-  const deliveries = (Array.isArray(data.deliveries) ? data.deliveries : []).filter((item) => !user?.supplier_id || String(item.supplier_id || item.supplierId || '') === String(user.supplier_id) || true)
+  const deliveries = (Array.isArray(data.deliveries) ? data.deliveries : []).filter((item) => !user?.supplier_id || String(item.supplier_id || item.supplierId || '') === String(user.supplier_id))
   const [status, setStatus] = useState('Aktif')
   const [selectedId, setSelectedId] = useState('')
 
@@ -32,7 +32,7 @@ export default function SupplierMonitoring({ data = {}, deviceLocation, refreshD
         <div>
           <span>Supplier</span>
           <h2>Monitoring Maps Pengiriman</h2>
-          <p>Supplier memantau posisi kurir dan rute jalan menuju gudang. Rute dihitung gratis memakai OSRM/OpenStreetMap.</p>
+          <p>Supplier hanya memantau pengiriman supplier ke gudang miliknya. Rute cabang tidak ditampilkan di role supplier.</p>
         </div>
         <div className="head-actions">
           {delivery && <StatusBadge>{delivery.status}</StatusBadge>}

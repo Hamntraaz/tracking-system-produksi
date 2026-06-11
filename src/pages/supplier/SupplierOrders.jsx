@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import StatusBadge from '../../components/StatusBadge'
+import Modal from '../../components/Modal'
 import { supplierConfirmOrder, updateOrderStatus } from '../../services/api'
 
 export default function SupplierOrders({ data = {}, deviceLocation, requestLocation, refreshData, user }) {
@@ -11,6 +12,7 @@ export default function SupplierOrders({ data = {}, deviceLocation, requestLocat
   const [busyId, setBusyId] = useState(null)
   const [message, setMessage] = useState('')
   const [selectedCourier, setSelectedCourier] = useState({})
+  const [proofModal, setProofModal] = useState(null)
 
   const pendingOrders = useMemo(() => orders.filter((order) => !['Pesanan Diterima', 'Selesai'].includes(order.status)), [orders])
 
@@ -93,15 +95,19 @@ export default function SupplierOrders({ data = {}, deviceLocation, requestLocat
       <article className="panel-card proof-list-card">
         <div className="panel-head"><div><span>Bukti Pengiriman</span><h3>Foto dari kurir</h3></div></div>
         <div className="proof-list">
-          {(data.deliveries || []).filter((delivery) => delivery.proof_photo).map((delivery) => (
-            <a href={delivery.proof_photo} target="_blank" rel="noreferrer" className="proof-mini" key={delivery.id}>
+          {(data.deliveries || []).filter((delivery) => delivery.proof_photo && (!user?.supplier_id || String(delivery.supplier_id || '') === String(user.supplier_id))).map((delivery) => (
+            <button type="button" className="proof-mini" key={delivery.id} onClick={() => setProofModal(delivery)}>
               <img src={delivery.proof_photo} alt={`Bukti ${delivery.order_code}`} />
-              <div><b>{delivery.order_code}</b><span>{delivery.proof_uploaded_at || 'Tersimpan'}</span></div>
-            </a>
+              <div><b>{delivery.order_code}</b><span>{delivery.proof_uploaded_at || 'Tersimpan'} • Klik lihat</span></div>
+            </button>
           ))}
-          {!(data.deliveries || []).some((delivery) => delivery.proof_photo) && <p className="muted-text">Belum ada bukti foto pengiriman.</p>}
+          {!(data.deliveries || []).some((delivery) => delivery.proof_photo && (!user?.supplier_id || String(delivery.supplier_id || '') === String(user.supplier_id))) && <p className="muted-text">Belum ada bukti foto pengiriman.</p>}
         </div>
       </article>
+
+      <Modal open={Boolean(proofModal)} title={`Bukti Foto ${proofModal?.order_code || ''}`} size="lg" onClose={() => setProofModal(null)}>
+        {proofModal && <div className="proof-modal-content"><img src={proofModal.proof_photo} alt={`Bukti ${proofModal.order_code}`} /><div className="detail-stack"><p><b>Status</b><span>{proofModal.status}</span></p><p><b>Kurir</b><span>{proofModal.courier_name || '-'}</span></p><p><b>Catatan</b><span>{proofModal.proof_note || '-'}</span></p></div><div className="modal-actions right-actions"><a className="soft-action" href={proofModal.proof_photo} target="_blank" rel="noreferrer">Buka Foto</a><button type="button" className="login-button" onClick={() => setProofModal(null)}>Tutup</button></div></div>}
+      </Modal>
     </>
   )
 }

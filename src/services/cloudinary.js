@@ -81,6 +81,46 @@ export async function prepareProofImage(file, onProgress) {
   }
 }
 
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Gagal membaca foto bukti.'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function prepareLocalProofDataUrl(file, onProgress) {
+  onProgress?.({ stage: 'compressing', progress: 18, message: 'Mengoptimalkan foto bukti untuk disimpan di database...' })
+  const image = await loadImageFromFile(file)
+  const maxDimension = 720
+  const originalWidth = image.naturalWidth || image.width
+  const originalHeight = image.naturalHeight || image.height
+  const scale = Math.min(1, maxDimension / Math.max(originalWidth, originalHeight || 1))
+  const targetWidth = Math.max(1, Math.round(originalWidth * scale))
+  const targetHeight = Math.max(1, Math.round(originalHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = targetWidth
+  canvas.height = targetHeight
+  const ctx = canvas.getContext('2d', { alpha: false })
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, targetWidth, targetHeight)
+  ctx.drawImage(image, 0, 0, targetWidth, targetHeight)
+  const blob = await canvasToBlob(canvas, 'image/jpeg', 0.62)
+  const dataUrl = await blobToDataUrl(blob)
+  onProgress?.({ stage: 'success', progress: 100, message: 'Foto bukti tersimpan lokal di database.' })
+  return {
+    url: dataUrl,
+    publicId: 'database-local-proof',
+    width: targetWidth,
+    height: targetHeight,
+    originalSize: file.size,
+    uploadedSize: blob.size,
+    storage: 'database',
+  }
+}
+
 function uploadWithProgress(url, formData, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -127,7 +167,7 @@ export async function uploadProofToCloudinary(file, options = {}) {
 
   if (!file) throw new Error('File bukti foto belum dipilih.')
   if (!isCloudinaryReady()) {
-    throw new Error('Cloudinary belum dikonfigurasi. Isi VITE_CLOUDINARY_CLOUD_NAME dan VITE_CLOUDINARY_UPLOAD_PRESET di frontend/.env.')
+    return prepareLocalProofDataUrl(file, onProgress)
   }
 
   const optimizedFile = await prepareProofImage(file, onProgress)

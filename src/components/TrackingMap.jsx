@@ -256,9 +256,14 @@ export default function TrackingMap({ delivery, deviceLocation, showUserLocation
       {!delivery && !userPoint && <div className="map-empty-overlay">{emptyText}</div>}
       <MapContainer center={fitPoints[0] || fallbackCenter} zoom={13} className="tracking-map" scrollWheelZoom zoomControl={false}>
         <ZoomControl position="topright" />
-        <ChangeMapView points={fitPoints.length ? fitPoints : roadRoute} focusNonce={focusNonce} />
+        <ChangeMapView points={roadRoute.length >= 2 ? roadRoute : fitPoints} focusNonce={focusNonce} />
         <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {roadRoute.length >= 2 && <Polyline positions={roadRoute} pathOptions={{ weight: 6, opacity: 0.85 }} />}
+        {roadRoute.length >= 2 && (
+          <>
+            <Polyline positions={roadRoute} pathOptions={{ color: '#2563eb', weight: 9, opacity: 0.18, lineCap: 'round', lineJoin: 'round' }} />
+            <Polyline positions={roadRoute} pathOptions={{ color: '#1d4ed8', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }} />
+          </>
+        )}
 
         {pickup && (
           <Marker position={pickup} icon={divMarker(pickupLabel, roleTone(pickupRole, 'red'), roleIcon(pickupRole))}>
