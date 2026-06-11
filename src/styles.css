@@ -1346,3 +1346,38 @@ td { padding: 14px; border-top: 1px solid #f0deca; color: #3e2c27; }
   .map-shell { height: 56vh; min-height: 330px; }
   .custom-map-marker b, .driver-live-marker b { display: none; }
 }
+
+
+/* V22: map route summary outside map so it never covers the mobile map */
+.tracking-map-wrapper { display: grid; gap: 10px; min-width: 0; }
+.tracking-map-wrapper .map-shell { width: 100%; }
+.route-status-inline {
+  position: static !important;
+  inset: auto !important;
+  max-width: none !important;
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #fffaf0;
+  border: 1px solid #f0deca;
+  box-shadow: none;
+  pointer-events: auto;
+}
+.route-status-inline b { font-size: 11px; line-height: 1.2; }
+.route-status-inline span { font-size: 11px; line-height: 1.35; }
+.map-floating-controls { max-width: calc(100% - 90px); }
+@media (max-width: 760px) {
+  .tracking-map-wrapper { gap: 8px; }
+  .map-shell { height: 54vh !important; min-height: 300px !important; max-height: 430px !important; }
+  .map-floating-controls { left: 10px !important; right: 70px !important; top: 10px !important; bottom: auto !important; display: flex !important; gap: 6px; max-width: none; }
+  .map-floating-controls button { min-height: 32px; padding: 0 10px; font-size: 11px; }
+  .route-status-inline { padding: 8px 10px !important; border-radius: 14px !important; }
+  .route-status-inline b::before { width: 24px; height: 5px; margin-right: 6px; }
+  .route-status-inline span { display: block; max-height: 38px; overflow: auto; }
+}
+@media (max-width: 420px) {
+  .map-shell { height: 50vh !important; min-height: 285px !important; }
+  .map-floating-controls button { font-size: 10.5px; padding: 0 8px; }
+}

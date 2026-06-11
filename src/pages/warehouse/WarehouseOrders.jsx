@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import StatusBadge from '../../components/StatusBadge'
-import { createPurchaseOrder, receiveOrder } from '../../services/api'
+import DeliveryProof from '../../components/DeliveryProof'
+import Modal from '../../components/Modal'
+import { createPurchaseOrder } from '../../services/api'
 
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
@@ -14,6 +16,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
   const [form, setForm] = useState({ supplier_id: suppliers[0]?.id || '', quantity: '', notes: '' })
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [proofModal, setProofModal] = useState(null)
 
   const selectedSupplier = useMemo(() => suppliers.find((item) => String(item.id) === String(form.supplier_id)), [suppliers, form.supplier_id])
   const selectedMaterial = useMemo(() => {
@@ -54,19 +57,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
     }
   }
 
-  async function confirmReceive(order) {
-    setSaving(true)
-    setMessage('')
-    try {
-      await receiveOrder({ order_id: order.id, created_by: user?.name || 'Gudang', warehouse_id: user?.warehouse_id || null })
-      setMessage(`${order.code} berhasil diterima gudang. Stok bertambah dan masuk laporan barang masuk.`)
-      await refreshData?.()
-    } catch (error) {
-      setMessage(error.message || 'Gagal mengonfirmasi barang diterima.')
-    } finally {
-      setSaving(false)
-    }
-  }
+
 
   const columns = [
     { key: 'code', label: 'Kode PO' },
@@ -77,11 +68,12 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
     { key: 'ordered_at', label: 'Tanggal' },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status}</StatusBadge> },
     {
-      key: 'receive',
-      label: 'Penerimaan',
-      render: (row) => row.status === 'Menunggu Konfirmasi Gudang'
-        ? <button type="button" className="soft-success compact" onClick={() => confirmReceive(row)} disabled={saving}>Terima Barang</button>
-        : <span className="muted-text">-</span>,
+      key: 'proof',
+      label: 'Bukti Barang',
+      render: (row) => {
+        const proof = (data.deliveries || []).find((delivery) => String(delivery.order_id || '') === String(row.id || '') && delivery.proof_photo)
+        return proof ? <button type="button" className="soft-action compact" onClick={() => setProofModal(proof)}>Lihat Bukti</button> : <span className="muted-text">Belum ada</span>
+      },
     },
   ]
 
@@ -116,6 +108,10 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
           </form>
         </article>
       </section>
+
+      <Modal open={Boolean(proofModal)} title={`Bukti Barang ${proofModal?.order_code || ''}`} size="lg" onClose={() => setProofModal(null)}>
+        {proofModal && <DeliveryProof delivery={proofModal} />}
+      </Modal>
     </>
   )
 }

@@ -104,20 +104,22 @@ export default function TrackingMap({
   const waitingText = roadWaypoints.length >= 2 ? routeStatus : 'Menunggu kurir berangkat agar titik live dan jalur biru muncul.'
 
   return (
-    <div className="map-shell map-shell-pro">
-      {!delivery && !userPoint && <div className="map-empty-overlay">{emptyText}</div>}
-      <MapContainer center={fitPoints[0] || fallbackCenter} zoom={13} className="tracking-map" scrollWheelZoom zoomControl={false}>
-        <ZoomControl position="topright" />
-        <ChangeMapView points={roadRoute.length >= 2 ? roadRoute : fitPoints} focusNonce={focusNonce} />
-        <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {roadRoute.length >= 2 && <><Polyline positions={roadRoute} pathOptions={{ color: '#2563eb', weight: 10, opacity: 0.20, lineCap: 'round', lineJoin: 'round' }} /><Polyline positions={roadRoute} pathOptions={{ color: '#1d4ed8', weight: 5, opacity: 0.98, lineCap: 'round', lineJoin: 'round' }} /></>}
-        {!hidePickup && pickup && <Marker position={pickup} icon={divMarker(pickupLabel, roleTone(pickupRole, 'red'), roleIcon(pickupRole))}><Popup><MarkerPopup title={pickupLabel} subtitle={pickupRole === 'supplier' ? 'Titik supplier' : 'Titik asal'} address={delivery?.pickup_address || `Lokasi ${pickupLabel}`} status={delivery?.status} points={roadWaypoints.length >= 2 ? roadWaypoints : [pickup]} delivery={delivery} /></Popup></Marker>}
-        {current && <Marker position={current} icon={driverMarker(courierLabel)}><Popup><MarkerPopup title={delivery?.courier_name || 'Posisi Kurir'} subtitle="Lokasi live kurir" address={`${Number(current[0]).toFixed(6)}, ${Number(current[1]).toFixed(6)}`} status={delivery?.status || 'Belum ada status'} updatedAt={delivery?.recorded_at || delivery?.updated_at || '-'} points={roadWaypoints.length >= 2 ? roadWaypoints : [current]} delivery={delivery} /></Popup></Marker>}
-        {destination && <Marker position={destination} icon={divMarker(destinationLabel, roleTone(destinationRole, 'green'), roleIcon(destinationRole))}><Popup><MarkerPopup title={destinationLabel} subtitle={destinationRole === 'branch' ? 'Titik cabang' : destinationRole === 'warehouse' ? 'Titik gudang' : 'Titik tujuan'} address={delivery?.destination_address || `Lokasi ${destinationLabel}`} status={delivery?.status} points={roadWaypoints.length >= 2 ? roadWaypoints : [destination]} delivery={delivery} /></Popup></Marker>}
-        {showUserLocation && userPoint && !useDeviceAsCurrent && !useDeviceAsDestination && <><Marker position={userPoint} icon={userMarker(viewerLabel, viewerUser?.role)}><Popup><MarkerPopup title={viewerLabel} subtitle="Lokasi perangkat aktif" address={`Akurasi ${Number.isFinite(Number(deviceLocation?.accuracy)) ? `${Math.round(Number(deviceLocation.accuracy))} meter` : '-'}`} points={[userPoint]} delivery={delivery} /></Popup></Marker>{Number.isFinite(Number(deviceLocation?.accuracy)) && <Circle center={userPoint} radius={Number(deviceLocation.accuracy)} pathOptions={{ weight: 1, opacity: 0.35 }} />}</>}
-      </MapContainer>
-      <div className="map-floating-controls"><button type="button" onClick={() => setFocusNonce((value) => value + 1)}>Fokus Rute</button><button type="button" onClick={() => openExternalMaps(roadWaypoints.length >= 2 ? roadWaypoints : fitPoints)}>Lihat di Maps</button></div>
-      <div className="route-status-pill route-status-pro"><b>{routeInfo ? `${formatDistance(routeInfo.distance_m)} • ${formatDuration(routeInfo.duration_s)}` : 'Maps Gratis'}</b><span>{waitingText}</span></div>
+    <div className="tracking-map-wrapper">
+      <div className="map-shell map-shell-pro">
+        {!delivery && !userPoint && <div className="map-empty-overlay">{emptyText}</div>}
+        <MapContainer center={fitPoints[0] || fallbackCenter} zoom={13} className="tracking-map" scrollWheelZoom zoomControl={false}>
+          <ZoomControl position="topright" />
+          <ChangeMapView points={roadRoute.length >= 2 ? roadRoute : fitPoints} focusNonce={focusNonce} />
+          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {roadRoute.length >= 2 && <><Polyline positions={roadRoute} pathOptions={{ color: '#2563eb', weight: 10, opacity: 0.20, lineCap: 'round', lineJoin: 'round' }} /><Polyline positions={roadRoute} pathOptions={{ color: '#1d4ed8', weight: 5, opacity: 0.98, lineCap: 'round', lineJoin: 'round' }} /></>}
+          {!hidePickup && pickup && <Marker position={pickup} icon={divMarker(pickupLabel, roleTone(pickupRole, 'red'), roleIcon(pickupRole))}><Popup><MarkerPopup title={pickupLabel} subtitle={pickupRole === 'supplier' ? 'Titik supplier' : 'Titik asal'} address={delivery?.pickup_address || `Lokasi ${pickupLabel}`} status={delivery?.status} points={roadWaypoints.length >= 2 ? roadWaypoints : [pickup]} delivery={delivery} /></Popup></Marker>}
+          {current && <Marker position={current} icon={driverMarker(courierLabel)}><Popup><MarkerPopup title={delivery?.courier_name || 'Posisi Kurir'} subtitle="Lokasi live kurir" address={`${Number(current[0]).toFixed(6)}, ${Number(current[1]).toFixed(6)}`} status={delivery?.status || 'Belum ada status'} updatedAt={delivery?.recorded_at || delivery?.updated_at || '-'} points={roadWaypoints.length >= 2 ? roadWaypoints : [current]} delivery={delivery} /></Popup></Marker>}
+          {destination && <Marker position={destination} icon={divMarker(destinationLabel, roleTone(destinationRole, 'green'), roleIcon(destinationRole))}><Popup><MarkerPopup title={destinationLabel} subtitle={destinationRole === 'branch' ? 'Titik cabang' : destinationRole === 'warehouse' ? 'Titik gudang' : 'Titik tujuan'} address={delivery?.destination_address || `Lokasi ${destinationLabel}`} status={delivery?.status} points={roadWaypoints.length >= 2 ? roadWaypoints : [destination]} delivery={delivery} /></Popup></Marker>}
+          {showUserLocation && userPoint && !useDeviceAsCurrent && !useDeviceAsDestination && <><Marker position={userPoint} icon={userMarker(viewerLabel, viewerUser?.role)}><Popup><MarkerPopup title={viewerLabel} subtitle="Lokasi perangkat aktif" address={`Akurasi ${Number.isFinite(Number(deviceLocation?.accuracy)) ? `${Math.round(Number(deviceLocation.accuracy))} meter` : '-'}`} points={[userPoint]} delivery={delivery} /></Popup></Marker>{Number.isFinite(Number(deviceLocation?.accuracy)) && <Circle center={userPoint} radius={Number(deviceLocation.accuracy)} pathOptions={{ weight: 1, opacity: 0.35 }} />}</>}
+        </MapContainer>
+        <div className="map-floating-controls"><button type="button" onClick={() => setFocusNonce((value) => value + 1)}>Fokus Rute</button><button type="button" onClick={() => openExternalMaps(roadWaypoints.length >= 2 ? roadWaypoints : fitPoints)}>Lihat di Maps</button></div>
+      </div>
+      <div className="route-status-pill route-status-pro route-status-inline"><b>{routeInfo ? `${formatDistance(routeInfo.distance_m)} • ${formatDuration(routeInfo.duration_s)}` : 'Maps Gratis'}</b><span>{waitingText}</span></div>
     </div>
   )
 }
