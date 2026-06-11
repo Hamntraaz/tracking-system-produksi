@@ -5,12 +5,15 @@ import Modal from '../../components/Modal'
 import { courierTaskResponse } from '../../services/api'
 
 function normalizeTasks(data, user) {
-  const supplierTasks = (Array.isArray(data.deliveries) ? data.deliveries : [])
-    .filter((item) => !user?.courier_id || String(item.courier_id || '') === String(user.courier_id))
-    .map((item) => ({ ...item, delivery_type: 'supplier_delivery', task_id: item.id, source_label: item.supplier_name || 'Supplier', target_label: item.warehouse_name || 'Gudang' }))
-  const branchTasks = (Array.isArray(data.branch_requests) ? data.branch_requests : [])
-    .filter((item) => item.courier_id && (!user?.courier_id || String(item.courier_id || '') === String(user.courier_id)))
-    .map((item) => ({ ...item, delivery_type: 'branch_request', task_id: item.id, order_code: item.code, pickup_address: item.warehouse_name || 'Gudang', destination_address: item.branch_name || 'Cabang', source_label: item.warehouse_name || 'Gudang', target_label: item.branch_name || 'Cabang' }))
+  const courierId = user?.courier_id ? String(user.courier_id) : ''
+  const allowSupplier = user?.courier_type !== 'warehouse'
+  const allowWarehouse = user?.courier_type !== 'supplier'
+  const supplierTasks = allowSupplier ? (Array.isArray(data.deliveries) ? data.deliveries : [])
+    .filter((item) => !courierId || String(item.courier_id || '') === courierId)
+    .map((item) => ({ ...item, delivery_type: 'supplier_delivery', task_id: item.id, source_label: item.supplier_name || 'Supplier', target_label: item.warehouse_name || 'Gudang' })) : []
+  const branchTasks = allowWarehouse ? (Array.isArray(data.branch_requests) ? data.branch_requests : [])
+    .filter((item) => item.courier_id && (!courierId || String(item.courier_id || '') === courierId))
+    .map((item) => ({ ...item, delivery_type: 'branch_request', task_id: item.id, order_code: item.code, pickup_address: item.warehouse_name || 'Gudang', destination_address: item.branch_name || 'Cabang', source_label: item.warehouse_name || 'Gudang', target_label: item.branch_name || 'Cabang' })) : []
   return [...supplierTasks, ...branchTasks]
 }
 

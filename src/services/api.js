@@ -1,11 +1,25 @@
 const rawBase = import.meta.env.VITE_API_BASE_URL || '/api'
 const API_BASE = rawBase.replace(/\/$/, '')
+const STORAGE_KEY = 'rafiza_session_v2'
+
+function getAuthToken() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return ''
+    const session = JSON.parse(raw)
+    return session?.token || ''
+  } catch {
+    return ''
+  }
+}
 
 async function request(path, options = {}) {
+  const token = getAuthToken()
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,
@@ -59,7 +73,6 @@ export function updateDeliveryLocation({ deliveryId, requestId, deliveryType, co
   })
 }
 
-
 export function courierTaskResponse({ deliveryId, requestId, deliveryType, courierId, action, reason, proof }) {
   return request('/courier-task-response', {
     method: 'POST',
@@ -93,7 +106,6 @@ export function createCourier(payload) {
   return request('/couriers', { method: 'POST', body: JSON.stringify(payload) })
 }
 
-
 export function upsertMaterial(payload) {
   return request('/materials', { method: 'POST', body: JSON.stringify(payload) })
 }
@@ -118,7 +130,6 @@ export function createManagedWarehouse(payload) {
   return request('/manager-warehouses', { method: 'POST', body: JSON.stringify(payload) })
 }
 
-
 export function updateManagedSupplier(payload) {
   return request('/manager-suppliers-update', { method: 'POST', body: JSON.stringify(payload) })
 }
@@ -134,7 +145,6 @@ export function updateManagedWarehouse(payload) {
 export function deleteManagedWarehouse(id) {
   return request('/manager-warehouses-delete', { method: 'POST', body: JSON.stringify({ id }) })
 }
-
 
 export function updateManagedAccountStatus(payload) {
   return request('/manager-accounts-status', { method: 'POST', body: JSON.stringify(payload) })

@@ -21,10 +21,16 @@ function makeTaskFromBranch(row, data = {}) { const locations = data.actor_locat
 
 export default function CourierTracking({ data = {}, user, deviceLocation, locationStatus, locationError, requestLocation, startWatching, stopWatching, refreshData }) {
   const task = useMemo(() => {
-    const delivery = (data.deliveries || []).find((item) => (!user?.courier_id || String(item.courier_id || '') === String(user.courier_id)) && !['Pengiriman Selesai', 'Pesanan Diterima'].includes(item.status))
-    if (delivery) return makeTaskFromSupplier(delivery)
-    const branch = (data.branch_requests || []).find((item) => item.courier_id && (!user?.courier_id || String(item.courier_id || '') === String(user.courier_id)) && !['Diterima Cabang', 'Ditolak Gudang', 'Ditolak Kurir'].includes(item.status))
-    return branch ? makeTaskFromBranch(branch, data) : null
+    const courierId = user?.courier_id ? String(user.courier_id) : ''
+    if (user?.courier_type !== 'warehouse') {
+      const delivery = (data.deliveries || []).find((item) => (!courierId || String(item.courier_id || '') === courierId) && !['Pengiriman Selesai', 'Pesanan Diterima'].includes(item.status))
+      if (delivery) return makeTaskFromSupplier(delivery)
+    }
+    if (user?.courier_type !== 'supplier') {
+      const branch = (data.branch_requests || []).find((item) => item.courier_id && (!courierId || String(item.courier_id || '') === courierId) && !['Diterima Cabang', 'Ditolak Gudang', 'Ditolak Kurir'].includes(item.status))
+      return branch ? makeTaskFromBranch(branch, data) : null
+    }
+    return null
   }, [data, user])
   const [trackingOn, setTrackingOn] = useState(false)
   const [sendStatus, setSendStatus] = useState('Menunggu instruksi perjalanan.')

@@ -55,7 +55,7 @@ const emptyData = {
   users: [],
 }
 
-const STORAGE_KEY = 'rafiza_user'
+const STORAGE_KEY = 'rafiza_session_v2'
 
 function normalizeArray(value) { return Array.isArray(value) ? value : [] }
 function normalizeData(payload) {
@@ -224,7 +224,7 @@ export default function App() {
     setBrowserPath(getPublicRouteByKey(publicPage).path)
   }
 
-  async function handleLogin(userData) {
+  async function handleLogin(userData, token = '') {
     const safeUser = userData || {}
     const nextUser = {
       id: safeUser.id || 0,
@@ -238,6 +238,8 @@ export default function App() {
       courier_id: safeUser.courier_id || null,
       warehouse_id: safeUser.warehouse_id || null,
       branch_id: safeUser.branch_id || null,
+      courier_type: safeUser.courier_type || (normalizeRole(safeUser.role) === 'courier' ? (safeUser.supplier_id ? 'supplier' : safeUser.warehouse_id ? 'warehouse' : null) : null),
+      token: token || safeUser.token || '',
     }
 
     const currentRoute = parsePrivatePath(window.location.pathname)

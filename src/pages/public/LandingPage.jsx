@@ -46,7 +46,7 @@ export default function LandingPage({ onLogin, activePage: controlledActivePage 
     try {
       requestLocation?.().catch(() => {})
       const payload = await login(email, password)
-      await onLogin(payload?.user)
+      await onLogin(payload?.user, payload?.token)
     } catch (err) {
       setError(err.message || 'Login gagal. Periksa koneksi API dan data akun.')
     } finally {
