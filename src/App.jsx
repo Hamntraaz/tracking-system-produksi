@@ -6,6 +6,7 @@ import WarehouseStocks from './pages/warehouse/WarehouseStocks'
 import WarehouseOrders from './pages/warehouse/WarehouseOrders'
 import WarehouseBranchRequests from './pages/warehouse/WarehouseBranchRequests'
 import WarehouseTracking from './pages/warehouse/WarehouseTracking'
+import WarehouseCouriers from './pages/warehouse/WarehouseCouriers'
 import SupplierDashboard from './pages/supplier/SupplierDashboard'
 import SupplierOrders from './pages/supplier/SupplierOrders'
 import SupplierCouriers from './pages/supplier/SupplierCouriers'
@@ -382,6 +383,7 @@ export default function App() {
       stocks: <WarehouseStocks {...pageProps} />,
       orders: <WarehouseOrders {...pageProps} />,
       branchRequests: <WarehouseBranchRequests {...pageProps} />,
+      couriers: <WarehouseCouriers {...pageProps} />,
       tracking: <WarehouseTracking {...pageProps} />,
     },
     branch: {

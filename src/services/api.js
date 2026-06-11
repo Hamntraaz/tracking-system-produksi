@@ -45,39 +45,39 @@ export function supplierConfirmOrder({ orderId, courierId, pickupLat, pickupLng,
   })
 }
 
-export function driverStart({ deliveryId, courierId, latitude, longitude, accuracy }) {
+export function driverStart({ deliveryId, requestId, deliveryType, courierId, latitude, longitude, accuracy }) {
   return request('/driver-start', {
     method: 'POST',
-    body: JSON.stringify({ delivery_id: deliveryId, courier_id: courierId, latitude, longitude, accuracy }),
+    body: JSON.stringify({ delivery_id: deliveryId, request_id: requestId, delivery_type: deliveryType, courier_id: courierId, latitude, longitude, accuracy }),
   })
 }
 
-export function updateDeliveryLocation({ deliveryId, courierId, latitude, longitude, accuracy }) {
+export function updateDeliveryLocation({ deliveryId, requestId, deliveryType, courierId, latitude, longitude, accuracy }) {
   return request('/delivery-location', {
     method: 'POST',
-    body: JSON.stringify({ delivery_id: deliveryId, courier_id: courierId, latitude, longitude, accuracy }),
+    body: JSON.stringify({ delivery_id: deliveryId, request_id: requestId, delivery_type: deliveryType, courier_id: courierId, latitude, longitude, accuracy }),
   })
 }
 
 
-export function courierTaskResponse({ deliveryId, courierId, action, reason, proof }) {
+export function courierTaskResponse({ deliveryId, requestId, deliveryType, courierId, action, reason, proof }) {
   return request('/courier-task-response', {
     method: 'POST',
-    body: JSON.stringify({ delivery_id: deliveryId, courier_id: courierId, action, reason, proof }),
+    body: JSON.stringify({ delivery_id: deliveryId, request_id: requestId, delivery_type: deliveryType, courier_id: courierId, action, reason, proof }),
   })
 }
 
-export function driverArrived({ deliveryId, courierId, latitude, longitude, accuracy }) {
+export function driverArrived({ deliveryId, requestId, deliveryType, courierId, latitude, longitude, accuracy }) {
   return request('/driver-arrived', {
     method: 'POST',
-    body: JSON.stringify({ delivery_id: deliveryId, courier_id: courierId, latitude, longitude, accuracy }),
+    body: JSON.stringify({ delivery_id: deliveryId, request_id: requestId, delivery_type: deliveryType, courier_id: courierId, latitude, longitude, accuracy }),
   })
 }
 
-export function deliveryComplete({ deliveryId, courierId, latitude, longitude, proofPhoto, proofNote }) {
+export function deliveryComplete({ deliveryId, requestId, deliveryType, courierId, latitude, longitude, proofPhoto, proofNote }) {
   return request('/delivery-complete', {
     method: 'POST',
-    body: JSON.stringify({ delivery_id: deliveryId, courier_id: courierId, latitude, longitude, proof_photo: proofPhoto, proof_note: proofNote }),
+    body: JSON.stringify({ delivery_id: deliveryId, request_id: requestId, delivery_type: deliveryType, courier_id: courierId, latitude, longitude, proof_photo: proofPhoto, proof_note: proofNote }),
   })
 }
 

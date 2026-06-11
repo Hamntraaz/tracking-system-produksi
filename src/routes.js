@@ -17,6 +17,7 @@ export const privateRoutes = {
     { key: 'stocks', path: 'stocks', label: 'Stok Gudang', title: 'Stok Gudang', icon: 'stock', aliases: ['stok-gudang'] },
     { key: 'orders', path: 'orders', label: 'Order Supplier', title: 'Order Bahan ke Supplier', icon: 'order', aliases: ['pesanan-supplier'] },
     { key: 'branchRequests', path: 'branch-requests', label: 'Permintaan Cabang', title: 'Permintaan Barang dari Cabang', icon: 'partner', aliases: ['permintaan-cabang'] },
+    { key: 'couriers', path: 'couriers', label: 'Kurir Gudang', title: 'Kurir Gudang', icon: 'courier', aliases: ['kurir-gudang'] },
     { key: 'tracking', path: 'tracking', label: 'Tracking Supplier', title: 'Tracking Barang dari Supplier', icon: 'map' },
   ],
   branch: [

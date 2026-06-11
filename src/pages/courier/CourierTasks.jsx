@@ -1,118 +1,57 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import StatusBadge from '../../components/StatusBadge'
+import Modal from '../../components/Modal'
 import { courierTaskResponse } from '../../services/api'
-import { isCloudinaryReady, uploadProofToCloudinary } from '../../services/cloudinary'
 
-export default function CourierTasks({ data = {}, refreshData }) {
-  const deliveries = Array.isArray(data.deliveries) ? data.deliveries : []
-  const activeDeliveries = deliveries.filter((delivery) => !['Menunggu Konfirmasi Gudang', 'Pengiriman Selesai', 'Pesanan Diterima'].includes(delivery.status))
+function normalizeTasks(data, user) {
+  const supplierTasks = (Array.isArray(data.deliveries) ? data.deliveries : [])
+    .filter((item) => !user?.courier_id || String(item.courier_id || '') === String(user.courier_id))
+    .map((item) => ({ ...item, delivery_type: 'supplier_delivery', task_id: item.id, source_label: item.supplier_name || 'Supplier', target_label: item.warehouse_name || 'Gudang' }))
+  const branchTasks = (Array.isArray(data.branch_requests) ? data.branch_requests : [])
+    .filter((item) => item.courier_id && (!user?.courier_id || String(item.courier_id || '') === String(user.courier_id)))
+    .map((item) => ({ ...item, delivery_type: 'branch_request', task_id: item.id, order_code: item.code, pickup_address: item.warehouse_name || 'Gudang', destination_address: item.branch_name || 'Cabang', source_label: item.warehouse_name || 'Gudang', target_label: item.branch_name || 'Cabang' }))
+  return [...supplierTasks, ...branchTasks]
+}
+
+export default function CourierTasks({ data = {}, refreshData, user }) {
+  const tasks = useMemo(() => normalizeTasks(data, user).filter((task) => !['Menunggu Konfirmasi Gudang', 'Menunggu Konfirmasi Cabang', 'Pengiriman Selesai', 'Pesanan Diterima', 'Diterima Cabang'].includes(task.status)), [data, user])
   const [busyId, setBusyId] = useState(null)
   const [message, setMessage] = useState('')
-  const [rejectOpenId, setRejectOpenId] = useState(null)
-  const [rejectReason, setRejectReason] = useState({})
-  const [rejectProof, setRejectProof] = useState({})
-  const [uploadingId, setUploadingId] = useState(null)
+  const [rejectTask, setRejectTask] = useState(null)
+  const [rejectReason, setRejectReason] = useState('')
 
   async function acceptTask(row) {
-    setBusyId(row.id)
-    setMessage('')
+    setBusyId(`${row.delivery_type}:${row.task_id}`); setMessage('')
     try {
-      await courierTaskResponse({ deliveryId: row.id, courierId: row.courier_id, action: 'accept' })
-      setMessage(`${row.order_code} diterima. Silakan lanjut ke menu Maps untuk klik Driver Berangkat.`)
+      await courierTaskResponse({ deliveryId: row.delivery_type === 'supplier_delivery' ? row.task_id : undefined, requestId: row.delivery_type === 'branch_request' ? row.task_id : undefined, deliveryType: row.delivery_type, courierId: row.courier_id, action: 'accept' })
+      setMessage(`${row.order_code || row.code} diterima. Silakan lanjut ke menu Maps untuk klik Driver Berangkat.`)
       await refreshData?.()
-    } catch (error) {
-      setMessage(error.message || 'Gagal menerima tugas antar.')
-    } finally {
-      setBusyId(null)
-    }
+    } catch (error) { setMessage(error.message || 'Gagal menerima tugas antar.') }
+    finally { setBusyId(null) }
   }
 
-  async function uploadRejectProof(row, file) {
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage('Ukuran bukti pendukung terlalu besar. Gunakan foto maksimal 5MB.')
-      return
-    }
-    if (!isCloudinaryReady()) {
-      setMessage('Cloudinary belum dikonfigurasi. Bukti pendukung tidak bisa diupload.')
-      return
-    }
-    setUploadingId(row.id)
-    setMessage('Mengupload bukti pendukung penolakan...')
+  async function submitReject() {
+    if (!rejectTask) return
+    if (!rejectReason.trim()) { setMessage('Isi alasan penolakan terlebih dahulu.'); return }
+    setBusyId(`${rejectTask.delivery_type}:${rejectTask.task_id}`); setMessage('')
     try {
-      const uploaded = await uploadProofToCloudinary(file)
-      setRejectProof((prev) => ({ ...prev, [row.id]: uploaded.url }))
-      setMessage('Bukti pendukung berhasil diupload.')
-    } catch (error) {
-      setMessage(error.message || 'Upload bukti pendukung gagal.')
-    } finally {
-      setUploadingId(null)
-    }
-  }
-
-  async function submitReject(row) {
-    const reason = (rejectReason[row.id] || '').trim()
-    if (!reason) {
-      setMessage('Isi catatan alasan penolakan terlebih dahulu.')
-      return
-    }
-    setBusyId(row.id)
-    setMessage('')
-    try {
-      await courierTaskResponse({ deliveryId: row.id, courierId: row.courier_id, action: 'reject', reason, proof: rejectProof[row.id] || '' })
-      setMessage(`${row.order_code} ditolak dan catatan sudah dikirim ke supplier, gudang, serta manajemen.`)
-      setRejectOpenId(null)
+      await courierTaskResponse({ deliveryId: rejectTask.delivery_type === 'supplier_delivery' ? rejectTask.task_id : undefined, requestId: rejectTask.delivery_type === 'branch_request' ? rejectTask.task_id : undefined, deliveryType: rejectTask.delivery_type, courierId: rejectTask.courier_id, action: 'reject', reason: rejectReason })
+      setMessage(`${rejectTask.order_code || rejectTask.code} ditolak dan catatan sudah dikirim.`)
+      setRejectTask(null); setRejectReason('')
       await refreshData?.()
-    } catch (error) {
-      setMessage(error.message || 'Gagal menolak tugas antar.')
-    } finally {
-      setBusyId(null)
-    }
+    } catch (error) { setMessage(error.message || 'Gagal menolak tugas antar.') }
+    finally { setBusyId(null) }
   }
 
   const columns = [
-    { key: 'order_code', label: 'Order' },
-    { key: 'pickup_address', label: 'Pickup' },
-    { key: 'destination_address', label: 'Tujuan' },
+    { key: 'order_code', label: 'Order/Request' },
+    { key: 'source_label', label: 'Dari' },
+    { key: 'target_label', label: 'Tujuan' },
     { key: 'courier_name', label: 'Kurir' },
     { key: 'status', label: 'Status', render: (row) => <StatusBadge>{row.status}</StatusBadge> },
-    {
-      key: 'actions',
-      label: 'Aksi',
-      render: (row) => {
-        const canRespond = row.status === 'Menunggu Persetujuan Kurir'
-        return (
-          <div className="table-actions task-actions">
-            <button type="button" onClick={() => acceptTask(row)} disabled={!canRespond || busyId === row.id}>✓ Terima</button>
-            <button type="button" className="soft-danger" onClick={() => setRejectOpenId(rejectOpenId === row.id ? null : row.id)} disabled={!canRespond || busyId === row.id}>Tolak</button>
-          </div>
-        )
-      },
-    },
+    { key: 'actions', label: 'Aksi', render: (row) => { const canRespond = row.status === 'Menunggu Persetujuan Kurir'; const key = `${row.delivery_type}:${row.task_id}`; return <div className="table-actions task-actions"><button type="button" onClick={() => acceptTask(row)} disabled={!canRespond || busyId === key}>✓ Terima</button><button type="button" className="soft-danger" onClick={() => setRejectTask(row)} disabled={!canRespond || busyId === key}>Tolak</button></div> } },
   ]
 
-  return (
-    <>
-      <section className="page-head-card"><div><span>Kurir</span><h2>Tugas Pengiriman</h2><p>Supplier menugaskan pengiriman ke kurir. Terima tugas untuk melanjutkan perjalanan, atau tolak dengan catatan dan bukti pendukung.</p></div></section>
-      {message && <div className="api-alert">{message}</div>}
-      <article className="panel-card"><ResponsiveTable columns={columns} rows={activeDeliveries} /></article>
-
-      {activeDeliveries.map((row) => rejectOpenId === row.id && (
-        <article className="panel-card reject-task-card" key={`reject-${row.id}`}>
-          <div className="panel-head"><div><span>Penolakan Tugas</span><h3>{row.order_code}</h3></div><StatusBadge>{row.status}</StatusBadge></div>
-          <label>Catatan alasan penolakan</label>
-          <textarea value={rejectReason[row.id] || ''} onChange={(event) => setRejectReason((prev) => ({ ...prev, [row.id]: event.target.value }))} placeholder="Contoh: kendaraan bermasalah, lokasi pickup tidak bisa dijangkau, atau jadwal bentrok." />
-          <label>Bukti pendukung</label>
-          <input type="file" accept="image/*" capture="environment" onChange={(event) => uploadRejectProof(row, event.target.files?.[0])} disabled={uploadingId === row.id || busyId === row.id} />
-          {uploadingId === row.id && <p className="helper-box">Mengupload bukti pendukung...</p>}
-          {rejectProof[row.id] && <a className="proof-link" href={rejectProof[row.id]} target="_blank" rel="noreferrer">Lihat bukti pendukung</a>}
-          <div className="modal-actions right-actions">
-            <button type="button" className="soft-action" onClick={() => setRejectOpenId(null)} disabled={busyId === row.id}>Batal</button>
-            <button type="button" className="soft-danger filled" onClick={() => submitReject(row)} disabled={busyId === row.id || uploadingId === row.id}>{busyId === row.id ? 'Mengirim...' : 'Kirim Penolakan'}</button>
-          </div>
-        </article>
-      ))}
-    </>
-  )
+  return <><section className="page-head-card"><div><span>Kurir</span><h2>Tugas Pengiriman</h2><p>Kurir supplier mengantar ke gudang. Kurir gudang mengantar ke cabang. Pilih tugas, terima, lalu lanjutkan dari menu Maps.</p></div></section>{message && <div className="api-alert">{message}</div>}<article className="panel-card"><ResponsiveTable columns={columns} rows={tasks} /></article><Modal open={Boolean(rejectTask)} title="Tolak Tugas Pengiriman" onClose={() => setRejectTask(null)}><div className="confirm-modal-content"><p>Berikan alasan profesional kenapa tugas <b>{rejectTask?.order_code || rejectTask?.code}</b> ditolak.</p><textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Contoh: kendaraan bermasalah atau jadwal bentrok." /><div className="modal-actions"><button className="soft-action" onClick={() => setRejectTask(null)}>Batal</button><button className="soft-danger" onClick={submitReject}>Kirim Penolakan</button></div></div></Modal></>
 }
