@@ -13,10 +13,10 @@ function driverMarker(label = 'Kurir Live') { return L.divIcon({ className: 'dri
 function viewerLocationLabel(user) { const name = user?.name ? ` - ${user.name}` : ''; if (user?.role === 'warehouse') return `Perangkat Gudang${name}`; if (user?.role === 'branch') return `Perangkat Cabang${name}`; if (user?.role === 'supplier') return `Perangkat Supplier${name}`; if (user?.role === 'courier') return `Perangkat Kurir Live${name}`; if (user?.role === 'manager') return `Perangkat Manajemen${name}`; return `Perangkat Pengguna${name}` }
 function userMarker(label, role) { return L.divIcon({ className: 'driver-live-marker viewer-marker', html: `<span class="user-pulse"></span><span class="user-dot">${roleIcon(role)}</span><b>${escapeHtml(label)}</b>`, iconSize: [190, 52], iconAnchor: [26, 32] }) }
 function toPoint(lat, lng) { const latitude = Number(lat); const longitude = Number(lng); if (Number.isFinite(latitude) && Number.isFinite(longitude)) return [latitude, longitude]; return null }
-function normalizePoint(point) { if (!point) return null; const lat = Number(point[0]); const lng = Number(point[1]); if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng]; return null }
+function normalizePoint(point) { if (!point) return null; const lat = Number(point[0]); const lng = Number(point[1]); if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null; if (lat === 0 && lng === 0) return null; return [lat, lng] }
 function formatDistance(meters) { const value = Number(meters); if (!Number.isFinite(value)) return '-'; if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)} km`; return `${Math.round(value)} m` }
 function formatDuration(seconds) { const value = Number(seconds); if (!Number.isFinite(value)) return '-'; const minutes = Math.max(1, Math.round(value / 60)); if (minutes >= 60) return `${Math.floor(minutes / 60)} jam ${minutes % 60} menit`; return `${minutes} menit` }
-function buildRouteUrl(points) { const coords = points.map(([lat, lng]) => `${lng},${lat}`).join(';'); return `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&alternatives=true&steps=true` }
+function buildRouteUrl(points) { const valid = (points || []).map(normalizePoint).filter(Boolean); const coords = valid.map(([lat, lng]) => `${lng},${lat}`).join(';'); return `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&alternatives=true&steps=true` }
 function googleMapsRouteUrl(points) { const valid = (points || []).map(normalizePoint).filter(Boolean); if (valid.length === 1) return `https://www.google.com/maps?q=${valid[0][0]},${valid[0][1]}`; if (valid.length < 2) return 'https://www.google.com/maps'; const origin = valid[0]; const destination = valid[valid.length - 1]; const waypoints = valid.slice(1, -1).map((point) => `${point[0]},${point[1]}`).join('|'); const url = new URL('https://www.google.com/maps/dir/'); url.searchParams.set('api', '1'); url.searchParams.set('origin', `${origin[0]},${origin[1]}`); url.searchParams.set('destination', `${destination[0]},${destination[1]}`); url.searchParams.set('travelmode', 'driving'); if (waypoints) url.searchParams.set('waypoints', waypoints); return url.toString() }
 function openExternalMaps(points) { window.open(googleMapsRouteUrl(points), '_blank', 'noopener,noreferrer') }
 function ChangeMapView({ points, focusNonce }) { const map = useMap(); useEffect(() => { const validPoints = (points || []).filter(Boolean); if (validPoints.length < 1) return; if (validPoints.length === 1) { map.setView(validPoints[0], 15, { animate: true }); return } const bounds = L.latLngBounds(validPoints); map.fitBounds(bounds, { padding: [44, 44], maxZoom: 16, animate: true }) }, [points, map, focusNonce]); return null }
@@ -34,10 +34,12 @@ export default function TrackingMap({
   currentLabel,
 }) {
   const fallbackCenter = [-6.2, 106.83]
-  const pickup = toPoint(delivery?.pickup_lat, delivery?.pickup_lng)
-  const dbCurrent = toPoint(delivery?.current_lat, delivery?.current_lng)
-  const userPoint = deviceLocation && Number.isFinite(Number(deviceLocation.latitude)) && Number.isFinite(Number(deviceLocation.longitude)) ? [Number(deviceLocation.latitude), Number(deviceLocation.longitude)] : null
-  const destinationRaw = toPoint(delivery?.destination_lat, delivery?.destination_lng)
+  const pickup = normalizePoint(toPoint(delivery?.pickup_lat, delivery?.pickup_lng))
+  const dbCurrent = normalizePoint(toPoint(delivery?.current_lat, delivery?.current_lng))
+  const userPoint = deviceLocation && Number.isFinite(Number(deviceLocation.latitude)) && Number.isFinite(Number(deviceLocation.longitude))
+    ? normalizePoint([Number(deviceLocation.latitude), Number(deviceLocation.longitude)])
+    : null
+  const destinationRaw = normalizePoint(toPoint(delivery?.destination_lat, delivery?.destination_lng))
   const current = useDeviceAsCurrent && userPoint ? userPoint : dbCurrent
   const destination = useDeviceAsDestination && userPoint ? userPoint : destinationRaw
   const mapType = delivery?.map_type || 'supplier_delivery'
