@@ -48,7 +48,7 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
   const [localTaskStatus, setLocalTaskStatus] = useState('')
   const lastSentRef = useRef(0)
   const effectiveStatus = localTaskStatus || task?.status || ''
-  const isInTransit = effectiveStatus === 'Kurir Dalam Perjalanan' || effectiveStatus === 'Driver Sampai'
+  const isInTransit = effectiveStatus === 'Kurir Berangkat' || effectiveStatus === 'Driver Sampai'
   const isArrived = effectiveStatus === 'Driver Sampai'
   const isWaitingStart = !departureStarted && task && ['Menunggu Driver Berangkat', 'Tugas Diterima Kurir'].includes(task.status)
   const isDone = ['Pengiriman Selesai', 'Diterima Cabang'].includes(task?.status)
@@ -65,7 +65,7 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
     }
     setBusy(true)
     setDepartureStarted(true)
-    setLocalTaskStatus('Kurir Dalam Perjalanan')
+    setLocalTaskStatus('Kurir Berangkat')
     try {
       const coords = await getQuickLocation()
       if (!coords) throw new Error('Lokasi belum terbaca. Coba tunggu GPS beberapa detik lalu klik lagi.')
@@ -82,7 +82,7 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
       setBusy(false)
     }
   }
-  async function markDriverArrived() { if (!task?.task_id) return; setBusy(true); setLocalTaskStatus('Driver Sampai'); setConfirmChecked(false); setConfirmVisible(false); try { const position = deviceLocation ? { coords: deviceLocation } : await requestLocation(); const coords = position.coords || position; await driverArrived({ ...apiRef, courierId: task?.courier_id, latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }); setSendStatus('Driver sampai. Silakan pilih dan upload foto bukti.'); await refreshData?.({ silent: true }).catch(() => {}) } catch (error) { setLocalTaskStatus('Kurir Dalam Perjalanan'); setSendStatus(error?.message || 'Gagal menyimpan status driver sampai.') } finally { setBusy(false) } }
+  async function markDriverArrived() { if (!task?.task_id) return; setBusy(true); setLocalTaskStatus('Driver Sampai'); setConfirmChecked(false); setConfirmVisible(false); try { const position = deviceLocation ? { coords: deviceLocation } : await requestLocation(); const coords = position.coords || position; await driverArrived({ ...apiRef, courierId: task?.courier_id, latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }); setSendStatus('Driver sampai. Silakan pilih dan upload foto bukti.'); await refreshData?.({ silent: true }).catch(() => {}) } catch (error) { setLocalTaskStatus('Kurir Berangkat'); setSendStatus(error?.message || 'Gagal menyimpan status driver sampai.') } finally { setBusy(false) } }
   async function handleProofFile(event) { const file = event.target.files?.[0]; if (!file) return; if (file.size > 15 * 1024 * 1024) { setSendStatus('Ukuran bukti foto terlalu besar. Gunakan foto maksimal 15MB.'); return } const localPreview = URL.createObjectURL(file); setUploadingProof(true); setUploadResult(null); setProofName(file.name); setProofPreview(localPreview); setUploadModal({ open: true, stage: 'preparing', progress: 4, message: 'Menyiapkan foto bukti...' }); setSendStatus(isCloudinaryReady() ? 'Mengupload bukti foto ke Cloudinary...' : 'Menyimpan bukti foto ke database lokal...'); try { const uploaded = await uploadProofToCloudinary(file, { onProgress: (info) => setUploadModal((prev) => ({ open: true, stage: info.stage || prev.stage, progress: Number.isFinite(Number(info.progress)) ? Number(info.progress) : prev.progress, message: info.message || prev.message })) }); setProofPhoto(uploaded.url); setProofPreview(uploaded.url); setUploadResult(uploaded); setUploadModal({ open: true, stage: 'success', progress: 100, message: uploaded.storage === 'database' ? 'Bukti foto berhasil disimpan di database.' : 'Bukti foto berhasil diupload ke Cloudinary.' }); setSendStatus('Bukti foto berhasil. Swipe konfirmasi pengiriman sudah aktif.') } catch (error) { setProofPhoto(''); setUploadModal({ open: true, stage: 'error', progress: 0, message: error.message || 'Upload bukti foto gagal.' }); setSendStatus(error.message || 'Upload bukti foto gagal.') } finally { setUploadingProof(false); URL.revokeObjectURL(localPreview) } }
   async function completeDelivery() { if (!task?.task_id) return; if (!proofPhoto) { setSendStatus('Upload bukti foto dulu sebelum menyelesaikan pengiriman.'); return } if (!confirmChecked) { setSendStatus('Centang konfirmasi bahwa barang benar-benar sudah diterima.'); return } setBusy(true); try { const position = deviceLocation ? { coords: deviceLocation } : await requestLocation(); const coords = position.coords || deviceLocation; await deliveryComplete({ ...apiRef, courierId: task?.courier_id, latitude: coords.latitude, longitude: coords.longitude, proofPhoto, proofNote }); stopWatching?.(); setTrackingOn(false); setConfirmVisible(false); setConfirmChecked(false); setSendStatus('Pengiriman selesai. Bukti foto sudah tersimpan dan bisa dilihat role terkait.'); await refreshData?.() } catch (error) { setSendStatus(error.message || 'Gagal menyelesaikan pengiriman.') } finally { setBusy(false) } }
   useEffect(() => { if (!isInTransit || trackingOn) return undefined; let cancelled = false; (async () => { try { const position = await requestLocation?.(); if (cancelled) return; await sendPosition(position); startWatching?.((latestPosition) => sendPosition(latestPosition)); setTrackingOn(true); setSendStatus('Tracking live aktif. Lokasi dikirim otomatis ke database.') } catch (error) { setTrackingOn(false); setSendStatus(error?.message || 'Tracking belum aktif karena lokasi perangkat belum terbaca.') } })(); return () => { cancelled = true } }, [isInTransit, task?.task_id])
@@ -90,8 +90,8 @@ export default function CourierTracking({ data = {}, user, deviceLocation, locat
     setProofPhoto(task?.proof_photo || '')
     setProofPreview(task?.proof_photo || '')
     const syncedStatus = task?.status || ''
-    setLocalTaskStatus((prev) => prev && prev !== syncedStatus ? prev : syncedStatus)
-      setDepartureStarted(['Kurir Dalam Perjalanan', 'Driver Sampai', 'Pengiriman Selesai'].includes(syncedStatus) || departureStarted)
+      setLocalTaskStatus((prev) => prev && prev !== syncedStatus ? prev : syncedStatus)
+      setDepartureStarted(['Kurir Berangkat', 'Driver Sampai', 'Pengiriman Selesai'].includes(syncedStatus) || departureStarted)
   }, [task?.proof_photo, task?.task_id, task?.status])
   useEffect(() => () => stopWatching?.(), [stopWatching])
 

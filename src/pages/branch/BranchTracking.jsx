@@ -11,7 +11,7 @@ export default function BranchTracking({ data = {}, deviceLocation, locationStat
   const [status, setStatus] = useState('Aktif')
   const [selectedId, setSelectedId] = useState('')
   const [keyword, setKeyword] = useState('')
-  const activeStatuses = ['Menunggu Persetujuan Kurir', 'Tugas Diterima Kurir', 'Kurir Dalam Perjalanan', 'Driver Sampai', 'Menunggu Konfirmasi Cabang']
+  const activeStatuses = ['Menunggu Persetujuan Kurir', 'Tugas Diterima Kurir', 'Kurir Berangkat', 'Driver Sampai', 'Menunggu Konfirmasi Cabang']
   const rows = useMemo(() => requests.filter((row) => { const matchStatus = status === 'Semua' || (status === 'Aktif' ? activeStatuses.includes(row.status) : row.status === status); const haystack = `${row.code} ${row.material_name} ${row.warehouse_name} ${row.courier_name} ${row.status}`.toLowerCase(); return matchStatus && (!keyword || haystack.includes(keyword.toLowerCase())) }), [requests, status, keyword])
   const selectedRequest = useMemo(() => selectedId ? requests.find((row) => String(row.id) === String(selectedId)) || rows[0] : rows.find((row) => activeStatuses.includes(row.status)) || rows[0], [requests, rows, selectedId])
   const branch = useMemo(() => (Array.isArray(data.branches) ? data.branches : []).find((item) => String(item.id) === String(user?.branch_id || selectedRequest?.branch_id)) || (data.branches || [])[0], [data.branches, selectedRequest?.branch_id, user?.branch_id])

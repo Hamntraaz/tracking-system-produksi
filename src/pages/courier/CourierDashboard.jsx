@@ -2,7 +2,7 @@ import { Icon } from '../../components/Icons'
 import StatCard from '../../components/StatCard'
 import StatusBadge from '../../components/StatusBadge'
 
-const activeStatuses = ['Menunggu Persetujuan Kurir', 'Tugas Diterima Kurir', 'Menunggu Driver Berangkat', 'Kurir Dalam Perjalanan', 'Driver Sampai']
+const activeStatuses = ['Menunggu Persetujuan Kurir', 'Tugas Diterima Kurir', 'Menunggu Driver Berangkat', 'Kurir Berangkat', 'Driver Sampai']
 const finishedStatuses = ['Pengiriman Selesai', 'Pesanan Diterima', 'Diterima Cabang']
 
 function courierTasks(data = {}, user = {}) {

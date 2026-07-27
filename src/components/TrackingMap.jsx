@@ -44,8 +44,8 @@ export default function TrackingMap({
   const destination = useDeviceAsDestination && userPoint ? userPoint : destinationRaw
   const mapType = delivery?.map_type || 'supplier_delivery'
   const activeStatuses = mapType === 'branch_request'
-    ? ['Menunggu Persetujuan Kurir', 'Tugas Diterima Kurir', 'Kurir Dalam Perjalanan', 'Driver Sampai', 'Menunggu Konfirmasi Cabang', 'Dikirim ke Cabang']
-    : ['Tugas Diterima Kurir', 'Menunggu Driver Berangkat', 'Kurir Dalam Perjalanan', 'Driver Sampai', 'Menunggu Konfirmasi Gudang', 'Pengiriman Selesai']
+    ? ['Menunggu Persetujuan Kurir', 'Tugas Diterima Kurir', 'Kurir Berangkat', 'Driver Sampai', 'Menunggu Konfirmasi Cabang', 'Dikirim ke Cabang']
+    : ['Tugas Diterima Kurir', 'Menunggu Driver Berangkat', 'Kurir Berangkat', 'Driver Sampai', 'Menunggu Konfirmasi Gudang', 'Pengiriman Selesai']
   const trackingActive = activeStatuses.includes(delivery?.status)
 
   const pickupRole = delivery?.pickup_role || 'supplier'
