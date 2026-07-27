@@ -98,8 +98,8 @@ export default function useBrowserLocation() {
         applyPosition(position)
         return position
       } catch (secondError) {
-        applyError(secondError || firstError)
-        throw secondError || firstError
+        const message = applyError(secondError || firstError)
+        throw new Error(message)
       }
     }
   }, [applyError, applyPosition, getPositionOnce])

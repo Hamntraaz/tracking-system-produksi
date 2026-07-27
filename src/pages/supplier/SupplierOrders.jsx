@@ -39,7 +39,10 @@ export default function SupplierOrders({ data = {}, deviceLocation, requestLocat
     setBusyId(order.id)
     setMessage('')
     try {
-      const position = deviceLocation ? { coords: deviceLocation } : await requestLocation?.()
+      const position = deviceLocation ? { coords: deviceLocation } : await Promise.race([
+        requestLocation?.(),
+        new Promise((resolve) => window.setTimeout(() => resolve(null), 2500)),
+      ])
       const coords = position?.coords || deviceLocation
       await supplierConfirmOrder({
         orderId: order.id,

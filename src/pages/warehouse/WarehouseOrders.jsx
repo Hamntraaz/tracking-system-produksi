@@ -9,16 +9,24 @@ function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
 }
 
+function normalizeCoords(location) {
+  const latitude = Number(location?.latitude)
+  const longitude = Number(location?.longitude)
+  return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null
+}
+
 export default function WarehouseOrders({ data = {}, deviceLocation, requestLocation, refreshData, user }) {
   const materials = Array.isArray(data.materials) ? data.materials : []
   const suppliers = Array.isArray(data.suppliers) ? data.suppliers.filter((item) => (item.status || 'Aktif') === 'Aktif') : []
   const orders = Array.isArray(data.orders) ? data.orders : []
+  const warehouses = Array.isArray(data.warehouses) ? data.warehouses : []
   const [form, setForm] = useState({ supplier_id: suppliers[0]?.id || '', quantity: '', notes: '' })
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
   const [proofModal, setProofModal] = useState(null)
 
   const selectedSupplier = useMemo(() => suppliers.find((item) => String(item.id) === String(form.supplier_id)), [suppliers, form.supplier_id])
+  const selectedWarehouse = useMemo(() => warehouses.find((item) => String(item.id) === String(user?.warehouse_id || '')), [warehouses, user?.warehouse_id])
   const selectedMaterial = useMemo(() => {
     if (!selectedSupplier?.material_type) return null
     return materials.find((item) => normalizeText(item.name) === normalizeText(selectedSupplier.material_type)) || null
@@ -27,6 +35,21 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
 
   function updateField(key, value) { setForm((prev) => ({ ...prev, [key]: value })) }
 
+  async function getOptionalCoords() {
+    const cached = normalizeCoords(deviceLocation)
+    if (cached) return cached
+
+    try {
+      const position = await Promise.race([
+        requestLocation?.(),
+        new Promise((resolve) => window.setTimeout(() => resolve(null), 2500)),
+      ])
+      return normalizeCoords(position?.coords)
+    } catch {
+      return null
+    }
+  }
+
   async function submitRequest(event) {
     event.preventDefault()
     setSaving(true)
@@ -34,8 +57,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
     try {
       if (!selectedSupplier) throw new Error('Pilih supplier terlebih dahulu.')
       if (!selectedMaterial?.id) throw new Error('Bahan baku dari supplier belum terhubung ke master bahan. Minta manajer cek data supplier.')
-      const position = deviceLocation ? { coords: deviceLocation } : await requestLocation?.()
-      const coords = position?.coords || deviceLocation
+      const coords = await getOptionalCoords()
       await createPurchaseOrder({
         material_id: Number(selectedMaterial.id),
         supplier_id: Number(form.supplier_id),
@@ -45,7 +67,7 @@ export default function WarehouseOrders({ data = {}, deviceLocation, requestLoca
         warehouse_id: user?.warehouse_id || null,
         destination_lat: coords?.latitude,
         destination_lng: coords?.longitude,
-        destination_address: user?.branch || user?.name || 'Gudang Rafiza',
+        destination_address: selectedWarehouse?.address || user?.branch || selectedWarehouse?.name || user?.name || 'Gudang Rafiza',
       })
       setMessage('Permintaan barang terkirim ke supplier yang dipilih. Supplier akan mendapat notifikasi beep saat dashboardnya aktif.')
       setForm({ supplier_id: suppliers[0]?.id || '', quantity: '', notes: '' })
