@@ -40,7 +40,7 @@ export default function TrackingMap({
     ? normalizePoint([Number(deviceLocation.latitude), Number(deviceLocation.longitude)])
     : null
   const destinationRaw = normalizePoint(toPoint(delivery?.destination_lat, delivery?.destination_lng))
-  const current = useDeviceAsCurrent && userPoint ? userPoint : dbCurrent
+  const current = useDeviceAsCurrent && userPoint ? userPoint : (dbCurrent || pickup)
   const destination = useDeviceAsDestination && userPoint ? userPoint : destinationRaw
   const mapType = delivery?.map_type || 'supplier_delivery'
   const activeStatuses = mapType === 'branch_request'
